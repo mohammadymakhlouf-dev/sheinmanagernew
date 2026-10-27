@@ -176,7 +176,7 @@
             </div>
             <div class="glass-card p-5 rounded-2xl relative overflow-hidden">
                 <div class="absolute top-0 right-0 w-1.5 h-full bg-rose-500"></div>
-                <span class="text-[11px] font-black text-slate-500 block mb-1 uppercase">المبالغ المتبقية للتحصيل</span>
+                <span class="text-[11px] font-black text-slate-500 block mb-1 uppercase">المبالغ المتبقية للتحصيل (غير المستلمة)</span>
                 <span id="statTotalRemaining" class="text-2xl font-black text-rose-500">0.00</span>
             </div>
         </section>
@@ -252,11 +252,11 @@
                     <label class="block text-xs font-bold text-slate-700 mb-1.5">حالة التسليم</label>
                     <div class="grid grid-cols-2 gap-3">
                         <label class="cursor-pointer border border-slate-200 rounded-xl p-3 flex items-center justify-center space-x-2 space-x-reverse has-[:checked]:bg-teal-500 has-[:checked]:text-white font-bold text-xs">
-                            <input type="radio" name="deliveryStatus" value="delivered" class="hidden">
+                            <input type="radio" name="deliveryStatus" value="delivered" onchange="autoFillPaidOnModal()" class="hidden">
                             <span>تم الاستلام</span>
                         </label>
                         <label class="cursor-pointer border border-slate-200 rounded-xl p-3 flex items-center justify-center space-x-2 space-x-reverse has-[:checked]:bg-amber-500 has-[:checked]:text-white font-bold text-xs">
-                            <input type="radio" name="deliveryStatus" value="pending" checked class="hidden">
+                            <input type="radio" name="deliveryStatus" value="pending" onchange="autoFillPaidOnModal()" checked class="hidden">
                             <span>لم يستلم بعد</span>
                         </label>
                     </div>
@@ -336,8 +336,8 @@
         <span id="toastMsg">تم بنجاح</span>
     </div>
 
-    <!-- Loud and Distinct Audio Elements -->
-    <audio id="soundNewPackage" src="https://assets.mixkit.co/active_storage/sfx/2869/2869-preview.mp3" preload="auto"></audio>
+    <!-- Unified Loud Audio Elements (Using strong sound for both) -->
+    <audio id="soundNewPackage" src="https://assets.mixkit.co/active_storage/sfx/2865/2865-preview.mp3" preload="auto"></audio>
     <audio id="soundDelivered" src="https://assets.mixkit.co/active_storage/sfx/2865/2865-preview.mp3" preload="auto"></audio>
 
     <!-- App Script -->
@@ -540,6 +540,18 @@
             document.getElementById('remainingPreview').innerText = Math.max(0, total - paid).toFixed(2);
         };
 
+        window.autoFillPaidOnModal = function() {
+            const radios = document.getElementsByName('deliveryStatus');
+            let status = 'pending';
+            radios.forEach(r => { if(r.checked) status = r.value; });
+            const total = parseFloat(document.getElementById('totalAmount').value) || 0;
+            const paidInput = document.getElementById('paidAmount');
+            if (status === 'delivered') {
+                paidInput.value = total;
+            }
+            calculateRemaining();
+        };
+
         window.openModal = function(pkg = null) {
             document.getElementById('packageModal').classList.remove('hidden');
             if (pkg) {
@@ -558,6 +570,7 @@
                 document.getElementById('packageForm').reset();
                 document.getElementById('packageId').value = '';
                 document.getElementById('packageCreatedAt').value = '';
+                document.getElementsByName('deliveryStatus').forEach(r => { r.checked = (r.value === 'pending'); });
                 document.getElementById('remainingPreview').innerText = '0.00';
             }
         };
@@ -573,13 +586,15 @@
             document.getElementsByName('deliveryStatus').forEach(r => { if(r.checked) deliveryStatus = r.value; });
 
             let paidAmount = parseFloat(document.getElementById('paidAmount').value) || 0;
-            if (deliveryStatus === 'delivered') paidAmount = totalAmount;
+            if (deliveryStatus === 'delivered') {
+                paidAmount = totalAmount; // سداد بالكامل تلقائياً
+            }
 
             const pkgData = {
                 customerName: document.getElementById('customerName').value.trim(),
                 phoneNumber: document.getElementById('phoneNumber').value.trim(),
                 trackingNumber: document.getElementById('trackingNumber').value.trim(),
-                totalAmount, paidAmount, remainingAmount: Math.max(0, totalAmount - paidAmount),
+                totalAmount, paidAmount, remainingAmount: (deliveryStatus === 'delivered') ? 0 : Math.max(0, totalAmount - paidAmount),
                 deliveryStatus, notes: document.getElementById('notes').value.trim(),
                 createdAt, updatedAt: now
             };
@@ -599,16 +614,21 @@
         window.toggleDeliveryStatus = async function(id) {
             const pkg = window.packages.find(p => p.id === id);
             if (!pkg) return;
+            
             pkg.deliveryStatus = (pkg.deliveryStatus === 'delivered') ? 'pending' : 'delivered';
-            if (pkg.deliveryStatus === 'delivered') { pkg.paidAmount = pkg.totalAmount; pkg.remainingAmount = 0; }
-            else { pkg.remainingAmount = Math.max(0, pkg.totalAmount - (pkg.paidAmount || 0)); }
+            if (pkg.deliveryStatus === 'delivered') { 
+                pkg.paidAmount = pkg.totalAmount; // سداد المبلغ بالكامل
+                pkg.remainingAmount = 0;           // تصفير الرصيد المتبقي
+            } else { 
+                pkg.remainingAmount = Math.max(0, pkg.totalAmount - (pkg.paidAmount || 0)); 
+            }
             pkg.updatedAt = new Date().toISOString();
 
             if (window.db) { await setDoc(doc(window.db, COLLECTION_NAME, id), pkg); }
             localStorage.setItem('shein_packages_data', JSON.stringify(window.packages));
             renderPackages();
             updateStats();
-            showToast("تم تحديث حالة التسليم", "success");
+            showToast("تم تحديث حالة التسليم والسداد بنجاح", "success");
         };
 
         window.confirmDelete = function(id) {
@@ -750,9 +770,16 @@
         window.updateStats = function() {
             document.getElementById('statDeliveredCount').innerText = window.packages.filter(p => p.deliveryStatus === 'delivered').length;
             document.getElementById('statPendingCount').innerText = window.packages.length - window.packages.filter(p => p.deliveryStatus === 'delivered').length;
+            
             const totalAmount = window.packages.reduce((sum, p) => sum + (parseFloat(p.totalAmount) || 0), 0);
-            const totalRemaining = window.packages.reduce((sum, p) => sum + (parseFloat(p.remainingAmount) || 0), 0);
+            
+            // حساب المبالغ المتبقية للطرود غير المستلمة فقط
+            const totalRemaining = window.packages
+                .filter(p => p.deliveryStatus !== 'delivered')
+                .reduce((sum, p) => sum + (parseFloat(p.remainingAmount) || (parseFloat(p.totalAmount) - parseFloat(p.paidAmount || 0))), 0);
+            
             const totalExpenses = window.expenses.reduce((sum, e) => sum + (parseFloat(e.amount) || 0), 0);
+            
             document.getElementById('statTotalAmount').innerText = (totalAmount - totalExpenses).toFixed(2);
             document.getElementById('statTotalRemaining').innerText = totalRemaining.toFixed(2);
             document.getElementById('statTotalExpenses').innerText = totalExpenses.toFixed(2);
