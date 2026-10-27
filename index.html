@@ -1,0 +1,763 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl" class="h-full bg-slate-50 text-slate-800">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>منصة إدارة طرود شي إن الاحترافية</title>
+
+    <!-- Tailwind CSS CDN -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script>
+        tailwind.config = {
+            darkMode: 'class',
+            theme: {
+                extend: {
+                    colors: {
+                        cyan: { 50: '#ecfeff', 100: '#cffaff', 200: '#a5f3fc', 500: '#06b6d4', 600: '#0891b2', 700: '#0e7490' },
+                        teal: { 50: '#f0fdf4', 100: '#ccfbf1', 500: '#14b8a6', 600: '#0d9488', 700: '#0f766e' }
+                    }
+                }
+            }
+        }
+    </script>
+
+    <!-- Icons & Fonts -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <script src="https://unpkg.com/@phosphor-icons/web"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Cairo:wght@400;500;600;700;800;900&display=swap" rel="stylesheet">
+
+    <style>
+        * { font-family: 'Cairo', sans-serif; }
+        body {
+            background-color: #f8fafc;
+            background-image: 
+                radial-gradient(at 0% 0%, rgba(6, 182, 212, 0.12) 0px, transparent 50%),
+                radial-gradient(at 100% 100%, rgba(20, 184, 166, 0.12) 0px, transparent 50%),
+                radial-gradient(at 50% 50%, rgba(241, 245, 249, 0.5) 0px, transparent 100%);
+            background-attachment: fixed;
+        }
+        .glass-card {
+            background: rgba(255, 255, 255, 0.85);
+            backdrop-filter: blur(16px);
+            -webkit-backdrop-filter: blur(16px);
+            border: 1px solid rgba(207, 250, 254, 0.8);
+            box-shadow: 0 4px 20px -2px rgba(6, 182, 212, 0.06);
+        }
+        .list-row-hover { transition: all 0.25s cubic-bezier(0.4, 0, 0.2, 1); }
+        .list-row-hover:hover {
+            background: rgba(255, 255, 255, 0.98);
+            border-color: rgba(6, 182, 212, 0.5);
+            transform: translateY(-2px);
+            box-shadow: 0 10px 25px -5px rgba(6, 182, 212, 0.12);
+        }
+        ::-webkit-scrollbar { width: 6px; height: 6px; }
+        ::-webkit-scrollbar-track { background: #f1f5f9; }
+        ::-webkit-scrollbar-thumb { background: #94a3b8; border-radius: 9999px; }
+    </style>
+</head>
+<body class="bg-slate-50 text-slate-800 antialiased min-h-full flex flex-col justify-between selection:bg-cyan-500 selection:text-white">
+
+    <!-- Auth Overlay / Login Screen -->
+    <div id="authScreen" class="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/40 backdrop-blur-md p-4 transition-all duration-300">
+        <div class="w-full max-w-md bg-white border border-cyan-100 rounded-3xl p-7 shadow-2xl space-y-6 relative overflow-hidden">
+            <div class="absolute -top-12 -right-12 w-36 h-36 bg-gradient-to-br from-cyan-400/20 to-teal-400/20 rounded-full blur-2xl"></div>
+            <div class="text-center space-y-2">
+                <div class="w-16 h-16 mx-auto rounded-2xl bg-gradient-to-tr from-cyan-500 to-teal-400 flex items-center justify-center text-white text-3xl shadow-lg shadow-cyan-500/30">
+                    <i class="ph-bold ph-package"></i>
+                </div>
+                <h2 class="text-2xl font-black text-slate-800">تسجيل الدخول للنظام</h2>
+                <p class="text-xs font-semibold text-slate-500">منصة إدارة ومزامنة طرود شي إن الفيروزية الاحترافية</p>
+            </div>
+            <form id="authForm" onsubmit="handleAuthSubmit(event)" class="space-y-4">
+                <div>
+                    <label class="block text-xs font-bold text-slate-700 mb-1.5">اسم المستخدم</label>
+                    <div class="relative">
+                        <i class="ph-bold ph-user absolute right-3.5 top-1/2 -translate-y-1/2 text-cyan-600 text-base"></i>
+                        <input type="text" id="authUsername" required placeholder="أدخل اسم المستخدم"
+                            class="w-full pl-4 pr-10 py-3 bg-slate-50 border border-slate-200 rounded-xl text-xs font-bold text-slate-800 focus:outline-none focus:border-cyan-500 focus:bg-white focus:ring-2 focus:ring-cyan-200 transition-all">
+                    </div>
+                </div>
+                <div>
+                    <label class="block text-xs font-bold text-slate-700 mb-1.5">كلمة المرور</label>
+                    <div class="relative">
+                        <i class="ph-bold ph-lock-key absolute right-3.5 top-1/2 -translate-y-1/2 text-cyan-600 text-base"></i>
+                        <input type="password" id="authPassword" required placeholder="••••••••"
+                            class="w-full pl-4 pr-10 py-3 bg-slate-50 border border-slate-200 rounded-xl text-xs font-bold text-slate-800 focus:outline-none focus:border-cyan-500 focus:bg-white focus:ring-2 focus:ring-cyan-200 transition-all">
+                    </div>
+                </div>
+                <button type="submit" class="w-full py-3.5 bg-gradient-to-r from-cyan-500 to-teal-500 hover:from-cyan-600 hover:to-teal-600 text-white text-xs font-black rounded-xl shadow-lg shadow-cyan-500/25 active:scale-98 transition-all flex items-center justify-center space-x-2 space-x-reverse">
+                    <i class="ph-bold ph-sign-in text-sm"></i>
+                    <span>تسجيل الدخول</span>
+                </button>
+            </form>
+        </div>
+    </div>
+
+    <!-- Main Navigation Bar -->
+    <header class="bg-white/90 backdrop-blur-md border-b border-cyan-100 sticky top-0 z-40 shadow-sm">
+        <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 h-20 flex items-center justify-between">
+            <div class="flex items-center space-x-3.5 space-x-reverse">
+                <div class="w-12 h-12 rounded-2xl bg-gradient-to-tr from-cyan-500 to-teal-400 text-white flex items-center justify-center shadow-lg shadow-cyan-500/20">
+                    <i class="ph-bold ph-boxes text-2xl"></i>
+                </div>
+                <div>
+                    <div class="flex items-center space-x-2.5 space-x-reverse">
+                        <h1 class="text-xl font-black text-slate-800 tracking-tight">وسيط شي إن</h1>
+                        <span id="syncBadge" class="text-[11px] font-bold px-3 py-0.5 rounded-full bg-amber-500/10 text-amber-600 border border-amber-500/20 flex items-center space-x-1.5 space-x-reverse">
+                            <i class="ph-bold ph-spinner text-xs animate-spin"></i>
+                            <span>جاري الاتصال...</span>
+                        </span>
+                    </div>
+                    <p class="text-[11px] text-teal-700 font-bold">منصة المزامنة الفورية والتحصيل المالي</p>
+                </div>
+            </div>
+
+            <!-- Action Controls -->
+            <div class="flex items-center space-x-2 space-x-reverse">
+                <button onclick="openModal()" class="flex items-center space-x-2 space-x-reverse bg-gradient-to-r from-cyan-500 to-teal-500 text-white text-xs font-black px-4.5 py-2.5 rounded-xl shadow-md shadow-cyan-500/20 active:scale-95 transition-all">
+                    <i class="ph-bold ph-plus-circle text-lg"></i>
+                    <span class="hidden sm:inline">إضافة طرد</span>
+                </button>
+
+                <button onclick="openExpensesModal()" class="flex items-center space-x-2 space-x-reverse bg-amber-500 text-white text-xs font-black px-4.5 py-2.5 rounded-xl shadow-md shadow-amber-500/20 active:scale-95 transition-all">
+                    <i class="ph-bold ph-receipt text-lg"></i>
+                    <span class="hidden sm:inline">المصروفات</span>
+                </button>
+
+                <!-- Notification Permission Button -->
+                <button onclick="requestNotificationPermission()" title="تفعيل إشعارات الخلفية" class="w-10 h-10 rounded-xl bg-slate-100 hover:bg-slate-200 text-amber-600 flex items-center justify-center transition-all border border-slate-200 active:scale-95">
+                    <i class="ph-bold ph-bell-ringing text-lg"></i>
+                </button>
+
+                <button onclick="refreshPageData()" title="إعادة تحميل" class="w-10 h-10 rounded-xl bg-slate-100 hover:bg-slate-200 text-cyan-700 flex items-center justify-center transition-all border border-slate-200">
+                    <i id="refreshIcon" class="ph-bold ph-arrows-clockwise text-lg"></i>
+                </button>
+
+                <div class="h-6 w-px bg-slate-200 mx-1"></div>
+
+                <div class="flex items-center space-x-2 space-x-reverse bg-cyan-50/80 p-1.5 pl-3 rounded-2xl border border-cyan-200">
+                    <div class="w-7 h-7 rounded-xl bg-cyan-500 text-white flex items-center justify-center font-bold text-xs">
+                        <i class="ph-bold ph-user-circle text-lg"></i>
+                    </div>
+                    <span id="displayUsername" class="text-xs font-black text-cyan-900 max-w-[90px] truncate hidden md:inline">admin</span>
+                    <button onclick="openChangePasswordModal()" title="تغيير كلمة المرور" class="w-7 h-7 rounded-lg text-amber-600 hover:bg-amber-100 flex items-center justify-center">
+                        <i class="ph-bold ph-key text-base"></i>
+                    </button>
+                    <button onclick="handleLogout()" title="تسجيل الخروج" class="w-7 h-7 rounded-lg text-rose-500 hover:bg-rose-100 flex items-center justify-center">
+                        <i class="ph-bold ph-sign-out text-base"></i>
+                    </button>
+                </div>
+            </div>
+        </div>
+    </header>
+
+    <!-- Main Content Container -->
+    <main class="max-w-7xl mx-auto w-full px-4 sm:px-6 lg:px-8 py-8 space-y-6 flex-grow">
+        <!-- Metrics -->
+        <section class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+            <div class="glass-card p-5 rounded-2xl relative overflow-hidden">
+                <div class="absolute top-0 right-0 w-1.5 h-full bg-cyan-500"></div>
+                <span class="text-[11px] font-black text-slate-500 block mb-1 uppercase">تصنيف الطرود (مستلم / غير مستلم)</span>
+                <div class="flex items-center space-x-3 space-x-reverse font-black text-xl mt-1">
+                    <span class="text-xs text-teal-700">مستلم: <strong id="statDeliveredCount" class="text-teal-600">0</strong></span>
+                    <span class="text-slate-300">|</span>
+                    <span class="text-xs text-amber-700">غير مستلم: <strong id="statPendingCount" class="text-amber-500">0</strong></span>
+                </div>
+            </div>
+            <div class="glass-card p-5 rounded-2xl relative overflow-hidden">
+                <div class="absolute top-0 right-0 w-1.5 h-full bg-amber-500"></div>
+                <span class="text-[11px] font-black text-slate-500 block mb-1 uppercase">إجمالي المصروفات المنفقة</span>
+                <span id="statTotalExpenses" class="text-2xl font-black text-amber-600">0.00</span>
+            </div>
+            <div class="glass-card p-5 rounded-2xl relative overflow-hidden">
+                <div class="absolute top-0 right-0 w-1.5 h-full bg-cyan-600"></div>
+                <span class="text-[11px] font-black text-slate-500 block mb-1 uppercase">إجمالي قيمة الشحنات (صافي)</span>
+                <span id="statTotalAmount" class="text-2xl font-black text-slate-800">0.00</span>
+            </div>
+            <div class="glass-card p-5 rounded-2xl relative overflow-hidden">
+                <div class="absolute top-0 right-0 w-1.5 h-full bg-rose-500"></div>
+                <span class="text-[11px] font-black text-slate-500 block mb-1 uppercase">المبالغ المتبقية للتحصيل</span>
+                <span id="statTotalRemaining" class="text-2xl font-black text-rose-500">0.00</span>
+            </div>
+        </section>
+
+        <!-- Search & Filters -->
+        <section class="glass-card p-4 rounded-2xl flex flex-col md:flex-row items-center justify-between gap-4">
+            <div class="relative w-full md:w-96">
+                <i class="ph-bold ph-magnifying-glass absolute right-4 top-1/2 -translate-y-1/2 text-cyan-600 text-base"></i>
+                <input type="text" id="searchInput" oninput="renderPackages()" placeholder="ابحث باسم المشتري، الهاتف، أو التتبع..." 
+                    class="w-full pl-10 pr-11 py-2.5 bg-white border border-slate-200 rounded-xl text-xs font-bold text-slate-800 focus:outline-none focus:border-cyan-500 shadow-sm">
+                <button id="clearSearchBtn" onclick="clearSearch()" class="hidden absolute left-3 top-1/2 -translate-y-1/2 text-slate-400">
+                    <i class="ph-bold ph-x-circle text-base"></i>
+                </button>
+            </div>
+            <div class="flex items-center space-x-2 space-x-reverse overflow-x-auto w-full md:w-auto">
+                <button onclick="setFilter('all')" id="filter-all" class="filter-btn px-4 py-2.5 rounded-xl text-xs font-black bg-gradient-to-r from-cyan-500 to-teal-500 text-white shadow-md">الكل</button>
+                <button onclick="setFilter('pending')" id="filter-pending" class="filter-btn px-4 py-2.5 rounded-xl text-xs font-bold text-slate-600 bg-slate-100">لم يستلم بعد</button>
+                <button onclick="setFilter('delivered')" id="filter-delivered" class="filter-btn px-4 py-2.5 rounded-xl text-xs font-bold text-slate-600 bg-slate-100">تم الاستلام</button>
+                <button onclick="setFilter('hasBalance')" id="filter-hasBalance" class="filter-btn px-4 py-2.5 rounded-xl text-xs font-bold text-slate-600 bg-slate-100">عليها متبقي حساب</button>
+            </div>
+        </section>
+
+        <!-- Package List -->
+        <section id="packageList" class="space-y-3"></section>
+
+        <div id="emptyState" class="hidden text-center py-16 glass-card rounded-3xl">
+            <div class="w-16 h-16 mx-auto mb-3 rounded-2xl bg-cyan-50 text-cyan-600 flex items-center justify-center text-3xl">
+                <i class="ph-bold ph-package"></i>
+            </div>
+            <h3 class="text-base font-black text-slate-800">لا توجد طرود تطابق العرض</h3>
+        </div>
+    </main>
+
+    <!-- Modals (Add/Edit, Expenses, Password, Delete) -->
+    <div id="packageModal" class="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/40 backdrop-blur-md hidden p-4">
+        <div class="bg-white border border-cyan-100 w-full max-w-lg rounded-3xl p-6 shadow-2xl max-h-[92vh] overflow-y-auto space-y-5">
+            <div class="flex items-center justify-between pb-3 border-b border-slate-100">
+                <h2 id="modalTitle" class="text-lg font-black text-slate-800">إضافة طرد جديد</h2>
+                <button onclick="closeModal()" class="w-8 h-8 rounded-full bg-slate-100 text-slate-500 flex items-center justify-center"><i class="ph-bold ph-x"></i></button>
+            </div>
+            <form id="packageForm" onsubmit="handleFormSubmit(event)" class="space-y-4">
+                <input type="hidden" id="packageId">
+                <input type="hidden" id="packageCreatedAt">
+                <div>
+                    <label class="block text-xs font-bold text-slate-700 mb-1.5">اسم المشتري *</label>
+                    <input type="text" id="customerName" required placeholder="مثال: سارة محمد" class="w-full px-4 py-3 bg-slate-50 border border-slate-200 rounded-xl text-xs font-bold">
+                </div>
+                <div class="grid grid-cols-1 sm:grid-cols-2 gap-3.5">
+                    <div>
+                        <label class="block text-xs font-bold text-slate-700 mb-1.5">رقم الهاتف (للواتساب)</label>
+                        <input type="tel" id="phoneNumber" placeholder="0599000000" class="w-full px-4 py-3 bg-slate-50 border border-slate-200 rounded-xl text-xs font-bold">
+                    </div>
+                    <div>
+                        <label class="block text-xs font-bold text-slate-700 mb-1.5">رقم التتبع</label>
+                        <input type="text" id="trackingNumber" placeholder="GSH1234567" class="w-full px-4 py-3 bg-slate-50 border border-slate-200 rounded-xl text-xs font-bold">
+                    </div>
+                </div>
+                <div class="grid grid-cols-1 sm:grid-cols-2 gap-3.5">
+                    <div>
+                        <label class="block text-xs font-bold text-slate-700 mb-1.5">إجمالي سعر الطرد *</label>
+                        <input type="number" step="0.01" id="totalAmount" required placeholder="0.00" oninput="calculateRemaining()" class="w-full px-4 py-3 bg-slate-50 border border-slate-200 rounded-xl text-xs font-bold">
+                    </div>
+                    <div>
+                        <label class="block text-xs font-bold text-slate-700 mb-1.5">المبلغ المدفوع كعربون</label>
+                        <input type="number" step="0.01" id="paidAmount" placeholder="0.00" oninput="calculateRemaining()" class="w-full px-4 py-3 bg-slate-50 border border-slate-200 rounded-xl text-xs font-bold">
+                    </div>
+                </div>
+                <div class="p-4 bg-teal-50 border border-teal-200 rounded-2xl flex items-center justify-between">
+                    <span class="text-xs font-extrabold text-teal-800">المبلغ المتبقي للتحصيل:</span>
+                    <span id="remainingPreview" class="text-lg font-black text-teal-600">0.00</span>
+                </div>
+                <div>
+                    <label class="block text-xs font-bold text-slate-700 mb-1.5">حالة التسليم</label>
+                    <div class="grid grid-cols-2 gap-3">
+                        <label class="cursor-pointer border border-slate-200 rounded-xl p-3 flex items-center justify-center space-x-2 space-x-reverse has-[:checked]:bg-teal-500 has-[:checked]:text-white font-bold text-xs">
+                            <input type="radio" name="deliveryStatus" value="delivered" class="hidden">
+                            <span>تم الاستلام</span>
+                        </label>
+                        <label class="cursor-pointer border border-slate-200 rounded-xl p-3 flex items-center justify-center space-x-2 space-x-reverse has-[:checked]:bg-amber-500 has-[:checked]:text-white font-bold text-xs">
+                            <input type="radio" name="deliveryStatus" value="pending" checked class="hidden">
+                            <span>لم يستلم بعد</span>
+                        </label>
+                    </div>
+                </div>
+                <div>
+                    <label class="block text-xs font-bold text-slate-700 mb-1.5">ملاحظات</label>
+                    <textarea id="notes" rows="2" class="w-full px-4 py-3 bg-slate-50 border border-slate-200 rounded-xl text-xs font-bold"></textarea>
+                </div>
+                <button type="submit" class="w-full py-3.5 bg-gradient-to-r from-cyan-500 to-teal-500 text-white font-black rounded-xl text-xs shadow-lg">حفظ البيانات</button>
+            </form>
+        </div>
+    </div>
+
+    <!-- Expenses Modal -->
+    <div id="expensesModal" class="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/40 backdrop-blur-md hidden p-4">
+        <div class="bg-white border border-amber-100 w-full max-w-xl rounded-3xl p-6 shadow-2xl max-h-[90vh] overflow-y-auto space-y-5">
+            <div class="flex items-center justify-between pb-3 border-b border-slate-100">
+                <h2 class="text-lg font-black text-slate-800">قائمة المصروفات والطرود المشتراة</h2>
+                <button onclick="closeExpensesModal()" class="w-8 h-8 rounded-full bg-slate-100 text-slate-500 flex items-center justify-center"><i class="ph-bold ph-x"></i></button>
+            </div>
+            <form id="expenseForm" onsubmit="handleExpenseSubmit(event)" class="space-y-3 bg-amber-50/50 p-4 rounded-2xl border border-amber-200">
+                <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                    <div>
+                        <label class="block text-[11px] font-bold text-slate-700 mb-1">وصف المصروف *</label>
+                        <input type="text" id="expenseTitle" required placeholder="مثال: شراء طرود..." class="w-full px-3.5 py-2.5 bg-white border border-slate-200 rounded-xl text-xs font-bold">
+                    </div>
+                    <div>
+                        <label class="block text-[11px] font-bold text-slate-700 mb-1">المبلغ *</label>
+                        <input type="number" step="0.01" id="expenseAmount" required placeholder="0.00" class="w-full px-3.5 py-2.5 bg-white border border-slate-200 rounded-xl text-xs font-bold">
+                    </div>
+                </div>
+                <button type="submit" class="w-full py-2.5 bg-amber-500 text-white font-black rounded-xl text-xs shadow-md">إضافة المصروف وخصمه</button>
+            </form>
+            <div id="expensesListContainer" class="space-y-2 max-h-60 overflow-y-auto"></div>
+        </div>
+    </div>
+
+    <!-- Delete Modal -->
+    <div id="deleteConfirmModal" class="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/40 backdrop-blur-md hidden p-4">
+        <div class="bg-white w-full max-w-sm rounded-3xl p-6 shadow-2xl text-center space-y-4">
+            <h3 class="text-base font-black text-slate-800">تأكيد الحذف</h3>
+            <div class="grid grid-cols-2 gap-3 pt-2">
+                <button onclick="closeDeleteModal()" class="py-3 px-4 bg-slate-100 text-slate-700 text-xs font-bold rounded-xl">إلغاء</button>
+                <button id="confirmDeleteBtn" class="py-3 px-4 bg-rose-500 text-white text-xs font-black rounded-xl shadow-md">حذف</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Change Password Modal -->
+    <div id="changePasswordModal" class="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/40 backdrop-blur-md hidden p-4">
+        <div class="bg-white w-full max-w-md rounded-3xl p-6 shadow-2xl space-y-5">
+            <div class="flex items-center justify-between pb-3 border-b border-slate-100">
+                <h2 class="text-lg font-black text-slate-800">تغيير كلمة المرور</h2>
+                <button onclick="closeChangePasswordModal()" class="w-8 h-8 rounded-full bg-slate-100 text-slate-500 flex items-center justify-center"><i class="ph-bold ph-x"></i></button>
+            </div>
+            <form id="changePasswordForm" onsubmit="handleChangePasswordSubmit(event)" class="space-y-4">
+                <div>
+                    <label class="block text-xs font-bold text-slate-700 mb-1.5">كلمة المرور الحالية</label>
+                    <input type="password" id="currentPassword" required class="w-full px-4 py-3 bg-slate-50 border border-slate-200 rounded-xl text-xs font-bold">
+                </div>
+                <div>
+                    <label class="block text-xs font-bold text-slate-700 mb-1.5">كلمة المرور الجديدة</label>
+                    <input type="password" id="newPassword" required class="w-full px-4 py-3 bg-slate-50 border border-slate-200 rounded-xl text-xs font-bold">
+                </div>
+                <div>
+                    <label class="block text-xs font-bold text-slate-700 mb-1.5">تأكيد الجديدة</label>
+                    <input type="password" id="confirmNewPassword" required class="w-full px-4 py-3 bg-slate-50 border border-slate-200 rounded-xl text-xs font-bold">
+                </div>
+                <button type="submit" class="w-full py-3.5 bg-gradient-to-r from-cyan-500 to-teal-500 text-white font-black rounded-xl text-xs shadow-lg">تحديث</button>
+            </form>
+        </div>
+    </div>
+
+    <!-- Toast -->
+    <div id="toast" class="fixed bottom-6 left-1/2 -translate-x-1/2 z-50 bg-slate-800 text-white text-xs font-black px-6 py-3.5 rounded-full shadow-2xl opacity-0 pointer-events-none transition-all duration-300 flex items-center space-x-2.5 space-x-reverse">
+        <i id="toastIcon" class="ph-bold ph-check-circle text-teal-400 text-lg"></i>
+        <span id="toastMsg">تم بنجاح</span>
+    </div>
+
+    <audio id="notifySound" src="https://assets.mixkit.co/active_storage/sfx/2869/2869-preview.mp3" preload="auto"></audio>
+
+    <!-- App Script -->
+    <script type="module">
+        import { initializeApp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-app.js";
+        import { getAuth, signInAnonymously, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
+        import { getFirestore, collection, doc, setDoc, deleteDoc, onSnapshot } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
+
+        const firebaseConfig = {
+            apiKey: "AIzaSyAJdzCaQkxUD0lAWp0G6xRHsMPJL4RFkpQ",
+            authDomain: "shein-86c9f.firebaseapp.com",
+            projectId: "shein-86c9f",
+            storageBucket: "shein-86c9f.firebasestorage.app",
+            messagingSenderId: "292671039190",
+            appId: "1:292671039190:web:5f22b7fdf7bbf0f6d18b77",
+            measurementId: "G-JBL21T1DZ0"
+        };
+
+        const COLLECTION_NAME = 'shein_packages';
+        const EXPENSES_COLLECTION = 'shein_expenses';
+        const CONFIG_DOC_PATH = 'shein_config/settings';
+
+        window.packages = JSON.parse(localStorage.getItem('shein_packages_data')) || [];
+        window.expenses = JSON.parse(localStorage.getItem('shein_expenses_data')) || [];
+        window.systemConfig = JSON.parse(localStorage.getItem('shein_system_config')) || { username: 'admin', password: '123' };
+        window.currentFilter = 'all';
+        window.db = null;
+        window.auth = null;
+        window.isLoggedIn = localStorage.getItem('shein_is_logged_in') === 'true';
+        window.isInitialLoad = true;
+
+        if (window.isLoggedIn) {
+            document.getElementById('authScreen').classList.add('hidden');
+            document.getElementById('displayUsername').innerText = window.systemConfig.username;
+        }
+
+        if ('serviceWorker' in navigator) {
+            navigator.serviceWorker.register('sw.js').catch(e => console.log(e));
+        }
+
+        window.requestNotificationPermission = function() {
+            if ('Notification' in window) {
+                Notification.requestPermission().then(permission => {
+                    if (permission === 'granted') showToast("تم تفعيل إشعارات الخلفية 🔔", "success");
+                    else showToast("تم رفض إذن الإشعارات", "error");
+                });
+            }
+        };
+
+        function sendSystemNotification(title, body) {
+            if ('Notification' in window && Notification.permission === 'granted') {
+                if (navigator.serviceWorker && navigator.serviceWorker.controller) {
+                    navigator.serviceWorker.ready.then(reg => {
+                        reg.showNotification(title, { body, icon: 'https://cdn-icons-png.flaticon.com/512/679/679821.png', vibrate: [200, 100, 200] });
+                    });
+                } else {
+                    new Notification(title, { body });
+                }
+            }
+        }
+
+        async function initFirebase() {
+            try {
+                const app = initializeApp(firebaseConfig);
+                window.db = getFirestore(app);
+                window.auth = getAuth(app);
+                onAuthStateChanged(window.auth, async (user) => {
+                    if (!user) { try { await signInAnonymously(window.auth); } catch(e) {} }
+                    subscribeToCollections();
+                });
+            } catch (err) {
+                updateSyncBadge('local');
+                renderPackages();
+                updateStats();
+            }
+        }
+
+        function playNotificationSound() {
+            try {
+                const audio = document.getElementById('notifySound');
+                if (audio) { audio.currentTime = 0; audio.play().catch(e => {}); }
+            } catch(e) {}
+        }
+
+        function subscribeToCollections() {
+            if (!window.db) return;
+
+            onSnapshot(collection(window.db, COLLECTION_NAME), (snapshot) => {
+                const newPackages = [];
+                const previousIds = new Set(window.packages.map(p => p.id));
+
+                snapshot.forEach(docSnap => { newPackages.push({ id: docSnap.id, ...docSnap.data() }); });
+
+                if (!window.isInitialLoad) {
+                    snapshot.docChanges().forEach((change) => {
+                        if (change.type === "added" && !previousIds.has(change.doc.id)) {
+                            const newPkg = change.doc.data();
+                            const customer = newPkg.customerName || 'عميل جديد';
+                            showToast(`📦 طرد جديد: ${customer}`, "info");
+                            playNotificationSound();
+                            sendSystemNotification("📦 طرد جديد في منصة شي إن", `تمت إضافة طرد جديد باسم: ${customer}`);
+                        }
+                    });
+                }
+
+                window.isInitialLoad = false;
+                window.packages = newPackages;
+                localStorage.setItem('shein_packages_data', JSON.stringify(window.packages));
+                renderPackages();
+                updateStats();
+                updateSyncBadge('synced');
+            }, (error) => { updateSyncBadge('local'); });
+
+            onSnapshot(collection(window.db, EXPENSES_COLLECTION), (snapshot) => {
+                window.expenses = [];
+                snapshot.forEach(docSnap => { window.expenses.push({ id: docSnap.id, ...docSnap.data() }); });
+                localStorage.setItem('shein_expenses_data', JSON.stringify(window.expenses));
+                updateStats();
+                renderExpensesList();
+            });
+
+            onSnapshot(doc(window.db, CONFIG_DOC_PATH), (docSnap) => {
+                if (docSnap.exists()) {
+                    window.systemConfig = docSnap.data();
+                    localStorage.setItem('shein_system_config', JSON.stringify(window.systemConfig));
+                } else {
+                    setDoc(doc(window.db, CONFIG_DOC_PATH), window.systemConfig);
+                }
+            });
+        }
+
+        window.handleAuthSubmit = function(e) {
+            e.preventDefault();
+            const u = document.getElementById('authUsername').value.trim();
+            const p = document.getElementById('authPassword').value.trim();
+            if (u === window.systemConfig.username && p === window.systemConfig.password) {
+                window.isLoggedIn = true;
+                localStorage.setItem('shein_is_logged_in', 'true');
+                document.getElementById('authScreen').classList.add('hidden');
+                document.getElementById('displayUsername').innerText = u;
+                showToast("تم تسجيل الدخول بنجاح", "success");
+            } else {
+                showToast("خطأ في اسم المستخدم أو كلمة المرور", "error");
+            }
+        };
+
+        window.handleLogout = function() {
+            window.isLoggedIn = false;
+            localStorage.removeItem('shein_is_logged_in');
+            document.getElementById('authScreen').classList.remove('hidden');
+            document.getElementById('authUsername').value = '';
+            document.getElementById('authPassword').value = '';
+            showToast("تم تسجيل الخروج", "success");
+        };
+
+        window.openChangePasswordModal = () => document.getElementById('changePasswordModal').classList.remove('hidden');
+        window.closeChangePasswordModal = () => document.getElementById('changePasswordModal').classList.add('hidden');
+
+        window.handleChangePasswordSubmit = async function(e) {
+            e.preventDefault();
+            const cur = document.getElementById('currentPassword').value;
+            const nw = document.getElementById('newPassword').value;
+            const cnf = document.getElementById('confirmNewPassword').value;
+            if (cur !== window.systemConfig.password) { showToast("كلمة المرور الحالية غير صحيحة", "error"); return; }
+            if (nw !== cnf) { showToast("كلمات المرور الجديدة غير متطابقة", "error"); return; }
+            window.systemConfig.password = nw;
+            localStorage.setItem('shein_system_config', JSON.stringify(window.systemConfig));
+            if (window.db) { await setDoc(doc(window.db, CONFIG_DOC_PATH), window.systemConfig); }
+            closeChangePasswordModal();
+            showToast("تم تحديث كلمة المرور بنجاح", "success");
+        };
+
+        window.updateSyncBadge = function(status) {
+            const badge = document.getElementById('syncBadge');
+            if (status === 'synced') {
+                badge.className = "text-[11px] font-bold px-3 py-0.5 rounded-full bg-teal-500/10 text-teal-600 border border-teal-500/20 flex items-center space-x-1.5 space-x-reverse";
+                badge.innerHTML = `<i class="ph-bold ph-cloud-check text-xs"></i><span>متزامن سحابياً</span>`;
+            } else {
+                badge.className = "text-[11px] font-bold px-3 py-0.5 rounded-full bg-amber-500/10 text-amber-600 border border-amber-500/20 flex items-center space-x-1.5 space-x-reverse";
+                badge.innerHTML = `<i class="ph-bold ph-hard-drive text-xs"><span>محلي</span>`;
+            }
+        };
+
+        window.calculateRemaining = function() {
+            const total = parseFloat(document.getElementById('totalAmount').value) || 0;
+            const paid = parseFloat(document.getElementById('paidAmount').value) || 0;
+            document.getElementById('remainingPreview').innerText = Math.max(0, total - paid).toFixed(2);
+        };
+
+        window.openModal = function(pkg = null) {
+            document.getElementById('packageModal').classList.remove('hidden');
+            if (pkg) {
+                document.getElementById('modalTitle').innerText = 'تعديل بيانات الطرد';
+                document.getElementById('packageId').value = pkg.id;
+                document.getElementById('packageCreatedAt').value = pkg.createdAt || '';
+                document.getElementById('customerName').value = pkg.customerName || '';
+                document.getElementById('phoneNumber').value = pkg.phoneNumber || '';
+                document.getElementById('trackingNumber').value = pkg.trackingNumber || '';
+                document.getElementById('totalAmount').value = pkg.totalAmount || 0;
+                document.getElementById('paidAmount').value = pkg.paidAmount || 0;
+                document.getElementById('notes').value = pkg.notes || '';
+                document.getElementsByName('deliveryStatus').forEach(r => r.checked = (r.value === pkg.deliveryStatus));
+            } else {
+                document.getElementById('modalTitle').innerText = 'إضافة طرد جديد';
+                document.getElementById('packageForm').reset();
+                document.getElementById('packageId').value = '';
+                document.getElementById('packageCreatedAt').value = '';
+                document.getElementById('remainingPreview').innerText = '0.00';
+            }
+        };
+        window.closeModal = () => document.getElementById('packageModal').classList.add('hidden');
+
+        window.handleFormSubmit = async function(e) {
+            e.preventDefault();
+            const now = new Date().toISOString();
+            const id = document.getElementById('packageId').value || 'pkg_' + Date.now();
+            const createdAt = document.getElementById('packageCreatedAt').value || now;
+            const totalAmount = parseFloat(document.getElementById('totalAmount').value) || 0;
+            let deliveryStatus = 'pending';
+            document.getElementsByName('deliveryStatus').forEach(r => { if(r.checked) deliveryStatus = r.value; });
+
+            let paidAmount = parseFloat(document.getElementById('paidAmount').value) || 0;
+            if (deliveryStatus === 'delivered') paidAmount = totalAmount;
+
+            const pkgData = {
+                customerName: document.getElementById('customerName').value.trim(),
+                phoneNumber: document.getElementById('phoneNumber').value.trim(),
+                trackingNumber: document.getElementById('trackingNumber').value.trim(),
+                totalAmount, paidAmount, remainingAmount: Math.max(0, totalAmount - paidAmount),
+                deliveryStatus, notes: document.getElementById('notes').value.trim(),
+                createdAt, updatedAt: now
+            };
+
+            if (window.db) { await setDoc(doc(window.db, COLLECTION_NAME, id), pkgData); }
+            const index = window.packages.findIndex(p => p.id === id);
+            if (index >= 0) window.packages[index] = { id, ...pkgData };
+            else window.packages.unshift({ id, ...pkgData });
+            localStorage.setItem('shein_packages_data', JSON.stringify(window.packages));
+
+            closeModal();
+            renderPackages();
+            updateStats();
+            showToast("تم حفظ الطرد بنجاح", "success");
+        };
+
+        window.toggleDeliveryStatus = async function(id) {
+            const pkg = window.packages.find(p => p.id === id);
+            if (!pkg) return;
+            pkg.deliveryStatus = (pkg.deliveryStatus === 'delivered') ? 'pending' : 'delivered';
+            if (pkg.deliveryStatus === 'delivered') { pkg.paidAmount = pkg.totalAmount; pkg.remainingAmount = 0; }
+            else { pkg.remainingAmount = Math.max(0, pkg.totalAmount - (pkg.paidAmount || 0)); }
+            pkg.updatedAt = new Date().toISOString();
+
+            if (window.db) { await setDoc(doc(window.db, COLLECTION_NAME, id), pkg); }
+            localStorage.setItem('shein_packages_data', JSON.stringify(window.packages));
+            renderPackages();
+            updateStats();
+            showToast("تم تحديث حالة التسليم", "success");
+        };
+
+        window.confirmDelete = function(id) {
+            const modal = document.getElementById('deleteConfirmModal');
+            modal.classList.remove('hidden');
+            document.getElementById('confirmDeleteBtn').onclick = async function() {
+                if (window.db) { await deleteDoc(doc(window.db, COLLECTION_NAME, id)); }
+                window.packages = window.packages.filter(p => p.id !== id);
+                localStorage.setItem('shein_packages_data', JSON.stringify(window.packages));
+                modal.classList.add('hidden');
+                renderPackages();
+                updateStats();
+                showToast("تم الحذف بنجاح", "success");
+            };
+        };
+        window.closeDeleteModal = () => document.getElementById('deleteConfirmModal').classList.add('hidden');
+
+        window.openExpensesModal = () => { document.getElementById('expensesModal').classList.remove('hidden'); renderExpensesList(); };
+        window.closeExpensesModal = () => document.getElementById('expensesModal').classList.add('hidden');
+
+        window.handleExpenseSubmit = async function(e) {
+            e.preventDefault();
+            const title = document.getElementById('expenseTitle').value.trim();
+            const amount = parseFloat(document.getElementById('expenseAmount').value) || 0;
+            const expId = 'exp_' + Date.now();
+            const expData = { title, amount, createdAt: new Date().toISOString() };
+
+            if (window.db) { await setDoc(doc(window.db, EXPENSES_COLLECTION, expId), expData); }
+            window.expenses.push({ id: expId, ...expData });
+            localStorage.setItem('shein_expenses_data', JSON.stringify(window.expenses));
+            document.getElementById('expenseForm').reset();
+            renderExpensesList();
+            updateStats();
+            showToast("تم إضافة المصروف", "success");
+        };
+
+        window.deleteExpense = async function(id) {
+            if (window.db) { await deleteDoc(doc(window.db, EXPENSES_COLLECTION, id)); }
+            window.expenses = window.expenses.filter(e => e.id !== id);
+            localStorage.setItem('shein_expenses_data', JSON.stringify(window.expenses));
+            renderExpensesList();
+            updateStats();
+            showToast("تم حذف المصروف", "success");
+        };
+
+        window.renderExpensesList = function() {
+            const container = document.getElementById('expensesListContainer');
+            if (window.expenses.length === 0) { container.innerHTML = `<p class="text-xs text-slate-400 text-center py-4">لا توجد مصروفات</p>`; return; }
+            container.innerHTML = window.expenses.map(exp => `
+                <div class="flex items-center justify-between p-3 bg-white border border-slate-200 rounded-xl">
+                    <div>
+                        <span class="text-xs font-black text-slate-800 block">${exp.title}</span>
+                        <span class="text-[10px] text-slate-400">${new Date(exp.createdAt).toLocaleDateString('ar-EG')}</span>
+                    </div>
+                    <div class="flex items-center space-x-3 space-x-reverse">
+                        <span class="text-xs font-black text-amber-600">${exp.amount.toFixed(2)} ₪</span>
+                        <button onclick="deleteExpense('${exp.id}')" class="w-7 h-7 rounded-lg text-rose-500 hover:bg-rose-50 flex items-center justify-center"><i class="ph-bold ph-trash"></i></button>
+                    </div>
+                </div>
+            `).join('');
+        };
+
+        window.setFilter = function(filter) {
+            window.currentFilter = filter;
+            document.querySelectorAll('.filter-btn').forEach(btn => btn.className = "filter-btn px-4 py-2.5 rounded-xl text-xs font-bold text-slate-600 bg-slate-100");
+            const active = document.getElementById(`filter-${filter}`);
+            if (active) active.className = "filter-btn px-4 py-2.5 rounded-xl text-xs font-black bg-gradient-to-r from-cyan-500 to-teal-500 text-white shadow-md";
+            renderPackages();
+        };
+
+        window.clearSearch = () => { document.getElementById('searchInput').value = ''; renderPackages(); };
+
+        function getPackageTimestamp(p) {
+            if (p.createdAt) return new Date(p.createdAt).getTime();
+            if (p.id && p.id.startsWith('pkg_')) { const ts = parseInt(p.id.replace('pkg_', ''), 10); if (!isNaN(ts)) return ts; }
+            return 0;
+        }
+
+        window.renderPackages = function() {
+            const query = document.getElementById('searchInput').value.trim().toLowerCase();
+            const sorted = [...window.packages].sort((a, b) => getPackageTimestamp(b) - getPackageTimestamp(a));
+
+            const filtered = sorted.filter(p => {
+                const matchQuery = !query || (p.customerName && p.customerName.toLowerCase().includes(query)) || (p.phoneNumber && p.phoneNumber.toLowerCase().includes(query)) || (p.trackingNumber && p.trackingNumber.toLowerCase().includes(query));
+                if (!matchQuery) return false;
+                if (window.currentFilter === 'pending') return p.deliveryStatus === 'pending';
+                if (window.currentFilter === 'delivered') return p.deliveryStatus === 'delivered';
+                if (window.currentFilter === 'hasBalance') return (parseFloat(p.totalAmount) - parseFloat(p.paidAmount || 0)) > 0;
+                return true;
+            });
+
+            const container = document.getElementById('packageList');
+            const emptyState = document.getElementById('emptyState');
+
+            if (filtered.length === 0) { container.innerHTML = ''; emptyState.classList.remove('hidden'); return; }
+            emptyState.classList.add('hidden');
+
+            container.innerHTML = filtered.map(p => {
+                const total = parseFloat(p.totalAmount) || 0;
+                const paid = parseFloat(p.paidAmount) || 0;
+                const remaining = Math.max(0, total - paid);
+                const isDelivered = p.deliveryStatus === 'delivered';
+
+                return `
+                    <div class="glass-card p-4 rounded-2xl list-row-hover flex flex-col md:flex-row items-start md:items-center justify-between gap-4 border border-cyan-100">
+                        <div class="flex items-start space-x-3.5 space-x-reverse w-full md:w-auto">
+                            <div class="w-11 h-11 rounded-2xl ${isDelivered ? 'bg-teal-50 text-teal-600' : 'bg-amber-50 text-amber-600'} flex items-center justify-center text-xl flex-shrink-0">
+                                <i class="ph-bold ${isDelivered ? 'ph-check-circle' : 'ph-clock'}"></i>
+                            </div>
+                            <div class="space-y-1">
+                                <div class="flex flex-wrap items-center gap-2">
+                                    <h3 class="text-sm font-black text-slate-800">${p.customerName}</h3>
+                                    ${p.phoneNumber ? `<a href="https://wa.me/${p.phoneNumber}" target="_blank" class="text-[11px] font-bold text-teal-600 bg-teal-50 px-2.5 py-0.5 rounded-full flex items-center space-x-1 space-x-reverse"><i class="ph-bold ph-whatsapp-logo"></i><span>${p.phoneNumber}</span></a>` : ''}
+                                </div>
+                                <div class="flex flex-wrap items-center gap-3 text-xs text-slate-500 font-bold">
+                                    ${p.trackingNumber ? `<span>تتبع: <strong class="text-cyan-700">${p.trackingNumber}</strong></span>` : ''}
+                                    ${p.notes ? `<span class="bg-cyan-50/60 text-cyan-900 px-2 py-0.5 rounded-lg border border-cyan-100">ملاحظة: ${p.notes}</span>` : ''}
+                                </div>
+                            </div>
+                        </div>
+                        <div class="flex items-center justify-between md:justify-end w-full md:w-auto gap-4 pt-2 md:pt-0 border-t md:border-t-0 border-slate-100">
+                            <div class="text-left flex items-center space-x-4 space-x-reverse">
+                                <div><span class="text-[10px] text-slate-400 block">الإجمالي</span><span class="text-xs font-black text-slate-800">${total.toFixed(2)} ₪</span></div>
+                                <div><span class="text-[10px] text-slate-400 block">المتبقي</span><span class="text-xs font-black ${remaining > 0 ? 'text-rose-500' : 'text-teal-600'}">${remaining.toFixed(2)} ₪</span></div>
+                            </div>
+                            <div class="flex items-center space-x-1.5 space-x-reverse">
+                                <button onclick="toggleDeliveryStatus('${p.id}')" class="px-3 py-2 rounded-xl text-xs font-bold ${isDelivered ? 'bg-teal-50 text-teal-700' : 'bg-amber-50 text-amber-700'}">
+                                    <span>${isDelivered ? 'تم الاستلام' : 'قيد الانتظار'}</span>
+                                </button>
+                                <button onclick='openModal(${JSON.stringify(p)})' class="w-9 h-9 rounded-xl bg-slate-100 text-cyan-700 flex items-center justify-center"><i class="ph-bold ph-pencil-simple"></i></button>
+                                <button onclick="confirmDelete('${p.id}')" class="w-9 h-9 rounded-xl bg-slate-100 text-rose-500 flex items-center justify-center"><i class="ph-bold ph-trash"></i></button>
+                            </div>
+                        </div>
+                    </div>
+                `;
+            }).join('');
+        };
+
+        window.updateStats = function() {
+            document.getElementById('statDeliveredCount').innerText = window.packages.filter(p => p.deliveryStatus === 'delivered').length;
+            document.getElementById('statPendingCount').innerText = window.packages.length - window.packages.filter(p => p.deliveryStatus === 'delivered').length;
+            const totalAmount = window.packages.reduce((sum, p) => sum + (parseFloat(p.totalAmount) || 0), 0);
+            const totalRemaining = window.packages.reduce((sum, p) => sum + (parseFloat(p.remainingAmount) || 0), 0);
+            const totalExpenses = window.expenses.reduce((sum, e) => sum + (parseFloat(e.amount) || 0), 0);
+            document.getElementById('statTotalAmount').innerText = (totalAmount - totalExpenses).toFixed(2);
+            document.getElementById('statTotalRemaining').innerText = totalRemaining.toFixed(2);
+            document.getElementById('statTotalExpenses').innerText = totalExpenses.toFixed(2);
+        };
+
+        window.refreshPageData = function() {
+            const icon = document.getElementById('refreshIcon');
+            icon.classList.add('animate-spin');
+            setTimeout(() => { icon.classList.remove('animate-spin'); renderPackages(); updateStats(); showToast("تم التحديث", "success"); }, 500);
+        };
+
+        window.showToast = function(msg, type = 'success') {
+            const toast = document.getElementById('toast');
+            document.getElementById('toastMsg').innerText = msg;
+            document.getElementById('toastIcon').className = type === 'success' ? "ph-bold ph-check-circle text-teal-400 text-lg" : "ph-bold ph-info text-amber-400 text-lg";
+            toast.style.opacity = '1'; toast.style.transform = 'translate(-50%, 0)';
+            setTimeout(() => { toast.style.opacity = '0'; toast.style.transform = 'translate(-50%, 15px)'; }, 3500);
+        };
+
+        initFirebase();
+    </script>
+</body>
+</html>
