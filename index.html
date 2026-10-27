@@ -336,7 +336,7 @@
         <span id="toastMsg">تم بنجاح</span>
     </div>
 
-    <!-- Unified Loud Audio Elements (Using strong sound for both) -->
+    <!-- Unified Loud Audio Elements -->
     <audio id="soundNewPackage" src="https://assets.mixkit.co/active_storage/sfx/2865/2865-preview.mp3" preload="auto"></audio>
     <audio id="soundDelivered" src="https://assets.mixkit.co/active_storage/sfx/2865/2865-preview.mp3" preload="auto"></audio>
 
@@ -464,9 +464,11 @@
                 updateSyncBadge('synced');
             }, (error) => { updateSyncBadge('local'); });
 
+            // الاستماع المباشر للمصروفات لتجنب التكرار
             onSnapshot(collection(window.db, EXPENSES_COLLECTION), (snapshot) => {
-                window.expenses = [];
-                snapshot.forEach(docSnap => { window.expenses.push({ id: docSnap.id, ...docSnap.data() }); });
+                const fetchedExpenses = [];
+                snapshot.forEach(docSnap => { fetchedExpenses.push({ id: docSnap.id, ...docSnap.data() }); });
+                window.expenses = fetchedExpenses;
                 localStorage.setItem('shein_expenses_data', JSON.stringify(window.expenses));
                 updateStats();
                 renderExpensesList();
@@ -587,7 +589,7 @@
 
             let paidAmount = parseFloat(document.getElementById('paidAmount').value) || 0;
             if (deliveryStatus === 'delivered') {
-                paidAmount = totalAmount; // سداد بالكامل تلقائياً
+                paidAmount = totalAmount; 
             }
 
             const pkgData = {
@@ -617,8 +619,8 @@
             
             pkg.deliveryStatus = (pkg.deliveryStatus === 'delivered') ? 'pending' : 'delivered';
             if (pkg.deliveryStatus === 'delivered') { 
-                pkg.paidAmount = pkg.totalAmount; // سداد المبلغ بالكامل
-                pkg.remainingAmount = 0;           // تصفير الرصيد المتبقي
+                pkg.paidAmount = pkg.totalAmount; // سداد كامل المبلغ وتصفير الرصيد
+                pkg.remainingAmount = 0;           
             } else { 
                 pkg.remainingAmount = Math.max(0, pkg.totalAmount - (pkg.paidAmount || 0)); 
             }
@@ -657,8 +659,6 @@
             const expData = { title, amount, createdAt: new Date().toISOString() };
 
             if (window.db) { await setDoc(doc(window.db, EXPENSES_COLLECTION, expId), expData); }
-            window.expenses.push({ id: expId, ...expData });
-            localStorage.setItem('shein_expenses_data', JSON.stringify(window.expenses));
             document.getElementById('expenseForm').reset();
             renderExpensesList();
             updateStats();
@@ -773,7 +773,6 @@
             
             const totalAmount = window.packages.reduce((sum, p) => sum + (parseFloat(p.totalAmount) || 0), 0);
             
-            // حساب المبالغ المتبقية للطرود غير المستلمة فقط
             const totalRemaining = window.packages
                 .filter(p => p.deliveryStatus !== 'delivered')
                 .reduce((sum, p) => sum + (parseFloat(p.remainingAmount) || (parseFloat(p.totalAmount) - parseFloat(p.paidAmount || 0))), 0);
