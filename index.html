@@ -26,6 +26,10 @@
     <script src="https://unpkg.com/@phosphor-icons/web"></script>
     <link href="https://fonts.googleapis.com/css2?family=Cairo:wght@400;500;600;700;800;900&display=swap" rel="stylesheet">
 
+    <!-- Google Identity Services & GAPI Client APIs -->
+    <script src="https://accounts.google.com/gsi/client" async defer></script>
+    <script src="https://apis.google.com/js/api.js" async defer></script>
+
     <style>
         * { font-family: 'Cairo', sans-serif; }
         body {
@@ -114,14 +118,20 @@
 
             <!-- Action Controls -->
             <div class="flex items-center space-x-2 space-x-reverse">
-                <button onclick="openModal()" class="flex items-center space-x-2 space-x-reverse bg-gradient-to-r from-cyan-500 to-teal-500 text-white text-xs font-black px-4.5 py-2.5 rounded-xl shadow-md shadow-cyan-500/20 active:scale-95 transition-all">
+                <button onclick="openModal()" class="flex items-center space-x-2 space-x-reverse bg-gradient-to-r from-cyan-500 to-teal-500 text-white text-xs font-black px-4 py-2.5 rounded-xl shadow-md shadow-cyan-500/20 active:scale-95 transition-all">
                     <i class="ph-bold ph-plus-circle text-lg"></i>
                     <span class="hidden sm:inline">إضافة طرد</span>
                 </button>
 
-                <button onclick="openExpensesModal()" class="flex items-center space-x-2 space-x-reverse bg-amber-500 text-white text-xs font-black px-4.5 py-2.5 rounded-xl shadow-md shadow-amber-500/20 active:scale-95 transition-all">
+                <button onclick="openExpensesModal()" class="flex items-center space-x-2 space-x-reverse bg-amber-500 text-white text-xs font-black px-4 py-2.5 rounded-xl shadow-md shadow-amber-500/20 active:scale-95 transition-all">
                     <i class="ph-bold ph-receipt text-lg"></i>
                     <span class="hidden sm:inline">المصروفات</span>
+                </button>
+
+                <!-- Google Drive Sync Button -->
+                <button id="googleDriveBtn" onclick="handleGoogleDriveSync()" class="flex items-center space-x-2 space-x-reverse bg-orange-600 text-white text-xs font-black px-4 py-2.5 rounded-xl shadow-md shadow-orange-600/20 active:scale-95 transition-all">
+                    <i class="ph-bold ph-google-drive text-lg"></i>
+                    <span class="hidden sm:inline" id="driveBtnText">جوجل درايف</span>
                 </button>
 
                 <!-- Notification Permission Button -->
@@ -165,19 +175,19 @@
                 </div>
             </div>
             <div class="glass-card p-5 rounded-2xl relative overflow-hidden">
+                <div class="absolute top-0 right-0 w-1.5 h-full bg-teal-500"></div>
+                <span class="text-[11px] font-black text-slate-500 block mb-1 uppercase">إجمالي المبالغ المستلمة فعلياً</span>
+                <span id="statTotalReceived" class="text-2xl font-black text-teal-600">0.00</span>
+            </div>
+            <div class="glass-card p-5 rounded-2xl relative overflow-hidden">
                 <div class="absolute top-0 right-0 w-1.5 h-full bg-amber-500"></div>
-                <span class="text-[11px] font-black text-slate-500 block mb-1 uppercase">إجمالي المصروفات المنفقة</span>
+                <span class="text-[11px] font-black text-slate-500 block mb-1 uppercase">إجمالي المنصرفات</span>
                 <span id="statTotalExpenses" class="text-2xl font-black text-amber-600">0.00</span>
             </div>
             <div class="glass-card p-5 rounded-2xl relative overflow-hidden">
                 <div class="absolute top-0 right-0 w-1.5 h-full bg-cyan-600"></div>
-                <span class="text-[11px] font-black text-slate-500 block mb-1 uppercase">إجمالي قيمة الشحنات (صافي)</span>
-                <span id="statTotalAmount" class="text-2xl font-black text-slate-800">0.00</span>
-            </div>
-            <div class="glass-card p-5 rounded-2xl relative overflow-hidden">
-                <div class="absolute top-0 right-0 w-1.5 h-full bg-rose-500"></div>
-                <span class="text-[11px] font-black text-slate-500 block mb-1 uppercase">المبالغ المتبقية للتحصيل (غير المستلمة)</span>
-                <span id="statTotalRemaining" class="text-2xl font-black text-rose-500">0.00</span>
+                <span class="text-[11px] font-black text-slate-500 block mb-1 uppercase">الصافي المتبقي (المستلم - المنصرفات)</span>
+                <span id="statNetTotal" class="text-2xl font-black text-slate-800">0.00</span>
             </div>
         </section>
 
@@ -210,7 +220,7 @@
         </div>
     </main>
 
-    <!-- Modals -->
+    <!-- Package Modal -->
     <div id="packageModal" class="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/40 backdrop-blur-md hidden p-4">
         <div class="bg-white border border-cyan-100 w-full max-w-lg rounded-3xl p-6 shadow-2xl max-h-[92vh] overflow-y-auto space-y-5">
             <div class="flex items-center justify-between pb-3 border-b border-slate-100">
@@ -274,21 +284,21 @@
     <div id="expensesModal" class="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/40 backdrop-blur-md hidden p-4">
         <div class="bg-white border border-amber-100 w-full max-w-xl rounded-3xl p-6 shadow-2xl max-h-[90vh] overflow-y-auto space-y-5">
             <div class="flex items-center justify-between pb-3 border-b border-slate-100">
-                <h2 class="text-lg font-black text-slate-800">قائمة المصروفات والطرود المشتراة</h2>
+                <h2 class="text-lg font-black text-slate-800">قائمة المنصرفات والمصاريف</h2>
                 <button onclick="closeExpensesModal()" class="w-8 h-8 rounded-full bg-slate-100 text-slate-500 flex items-center justify-center"><i class="ph-bold ph-x"></i></button>
             </div>
             <form id="expenseForm" onsubmit="handleExpenseSubmit(event)" class="space-y-3 bg-amber-50/50 p-4 rounded-2xl border border-amber-200">
                 <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
                     <div>
-                        <label class="block text-[11px] font-bold text-slate-700 mb-1">وصف المصروف *</label>
-                        <input type="text" id="expenseTitle" required placeholder="مثال: شراء طرود..." class="w-full px-3.5 py-2.5 bg-white border border-slate-200 rounded-xl text-xs font-bold">
+                        <label class="block text-[11px] font-bold text-slate-700 mb-1">وصف المنصرف *</label>
+                        <input type="text" id="expenseTitle" required placeholder="مثال: رسوم شحن، شراء طرود..." class="w-full px-3.5 py-2.5 bg-white border border-slate-200 rounded-xl text-xs font-bold">
                     </div>
                     <div>
                         <label class="block text-[11px] font-bold text-slate-700 mb-1">المبلغ *</label>
                         <input type="number" step="0.01" id="expenseAmount" required placeholder="0.00" class="w-full px-3.5 py-2.5 bg-white border border-slate-200 rounded-xl text-xs font-bold">
                     </div>
                 </div>
-                <button type="submit" class="w-full py-2.5 bg-amber-500 text-white font-black rounded-xl text-xs shadow-md">إضافة المصروف وخصمه</button>
+                <button type="submit" class="w-full py-2.5 bg-amber-500 text-white font-black rounded-xl text-xs shadow-md">إضافة المنصرف وتوثيقه</button>
             </form>
             <div id="expensesListContainer" class="space-y-2 max-h-60 overflow-y-auto"></div>
         </div>
@@ -340,7 +350,7 @@
     <audio id="soundNewPackage" src="https://assets.mixkit.co/active_storage/sfx/2865/2865-preview.mp3" preload="auto"></audio>
     <audio id="soundDelivered" src="https://assets.mixkit.co/active_storage/sfx/2865/2865-preview.mp3" preload="auto"></audio>
 
-    <!-- App Script -->
+    <!-- App Script Module -->
     <script type="module">
         import { initializeApp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-app.js";
         import { getAuth, signInAnonymously, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
@@ -356,6 +366,10 @@
             measurementId: "G-JBL21T1DZ0"
         };
 
+        // Google Drive Configuration
+        const GOOGLE_CLIENT_ID = '292671039190-sheinapp.apps.googleusercontent.com'; // معرف العميل
+        const SCOPES = 'https://www.googleapis.com/auth/drive.file';
+
         const COLLECTION_NAME = 'shein_packages';
         const EXPENSES_COLLECTION = 'shein_expenses';
         const CONFIG_DOC_PATH = 'shein_config/settings';
@@ -368,6 +382,7 @@
         window.auth = null;
         window.isLoggedIn = localStorage.getItem('shein_is_logged_in') === 'true';
         window.isInitialLoad = true;
+        window.gdriveToken = localStorage.getItem('shein_gdrive_token') || null;
 
         if (window.isLoggedIn) {
             document.getElementById('authScreen').classList.add('hidden');
@@ -376,6 +391,103 @@
 
         if ('serviceWorker' in navigator) {
             navigator.serviceWorker.register('sw.js').catch(e => console.log(e));
+        }
+
+        // --- Google Drive Authentication & Sync Logic ---
+        let tokenClient;
+
+        window.initGoogleDrive = function() {
+            if (typeof google === 'undefined') return;
+            tokenClient = google.accounts.oauth2.initTokenClient({
+                client_id: GOOGLE_CLIENT_ID,
+                scope: SCOPES,
+                callback: async (response) => {
+                    if (response.error !== undefined) {
+                        showToast("فشل تسجيل الدخول بحساب جوجل", "error");
+                        return;
+                    }
+                    window.gdriveToken = response.access_token;
+                    localStorage.setItem('shein_gdrive_token', window.gdriveToken);
+                    document.getElementById('driveBtnText').innerText = "تم الربط مع Drive";
+                    showToast("تم ربط حساب جوجل بنجاح ☁️", "success");
+                    await uploadDataToDrive();
+                },
+            });
+
+            if (window.gdriveToken) {
+                document.getElementById('driveBtnText').innerText = "مزامنة جوجل درايف";
+            }
+        };
+
+        window.handleGoogleDriveSync = function() {
+            if (!tokenClient) {
+                window.initGoogleDrive();
+            }
+            if (!window.gdriveToken) {
+                tokenClient.requestAccessToken({ prompt: 'consent' });
+            } else {
+                uploadDataToDrive();
+            }
+        };
+
+        async function uploadDataToDrive() {
+            showToast("جاري مزامنة البيانات مع Google Drive...", "info");
+            const backupData = {
+                packages: window.packages,
+                expenses: window.expenses,
+                exportedAt: new Date().toISOString()
+            };
+
+            const fileContent = JSON.stringify(backupData, null, 2);
+            const metadata = {
+                name: 'shein_backup_data.json',
+                mimeType: 'application/json'
+            };
+
+            try {
+                // البحث عما إذا كان الملف موجوداً مسبقاً للتحديث
+                const searchRes = await fetch('https://www.googleapis.com/drive/v3/files?q=name="shein_backup_data.json"+and+trashed=false', {
+                    headers: { 'Authorization': `Bearer ${window.gdriveToken}` }
+                });
+                const searchData = await searchRes.json();
+
+                let fileId = null;
+                if (searchData.files && searchData.files.length > 0) {
+                    fileId = searchData.files[0].id;
+                }
+
+                const form = new FormData();
+                form.append('metadata', new Blob([JSON.stringify(metadata)], { type: 'application/json' }));
+                form.append('file', new Blob([fileContent], { type: 'application/json' }));
+
+                let uploadUrl = 'https://www.googleapis.com/upload/drive/v3/files?uploadType=multipart';
+                let method = 'POST';
+
+                if (fileId) {
+                    uploadUrl = `https://www.googleapis.com/upload/drive/v3/files/${fileId}?uploadType=multipart`;
+                    method = 'PATCH';
+                }
+
+                const res = await fetch(uploadUrl, {
+                    method: method,
+                    headers: { 'Authorization': `Bearer ${window.gdriveToken}` },
+                    body: form
+                });
+
+                if (res.ok) {
+                    showToast("تم حفظ وتحديث النسخة الاحتياطية على Google Drive بنجاح ✅", "success");
+                } else {
+                    if (res.status === 401) {
+                        localStorage.removeItem('shein_gdrive_token');
+                        window.gdriveToken = null;
+                        tokenClient.requestAccessToken({ prompt: '' });
+                    } else {
+                        showToast("حدث خطأ أثناء الرفع إلى Google Drive", "error");
+                    }
+                }
+            } catch (err) {
+                showToast("خطأ في الاتصال بجوجل درايف", "error");
+            }
         }
 
         window.requestNotificationPermission = function() {
@@ -423,6 +535,17 @@
             } catch(e) {}
         }
 
+        function updateSyncBadge(status) {
+            const badge = document.getElementById('syncBadge');
+            if (status === 'synced') {
+                badge.className = 'text-[11px] font-bold px-3 py-0.5 rounded-full bg-teal-500/10 text-teal-600 border border-teal-500/20 flex items-center space-x-1.5 space-x-reverse';
+                badge.innerHTML = `<i class="ph-bold ph-cloud-check text-xs"></i><span>متصل بالسحابة</span>`;
+            } else {
+                badge.className = 'text-[11px] font-bold px-3 py-0.5 rounded-full bg-amber-500/10 text-amber-600 border border-amber-500/20 flex items-center space-x-1.5 space-x-reverse';
+                badge.innerHTML = `<i class="ph-bold ph-database text-xs"></i><span>وضع محلي</span>`;
+            }
+        }
+
         function subscribeToCollections() {
             if (!window.db) return;
 
@@ -464,7 +587,6 @@
                 updateSyncBadge('synced');
             }, (error) => { updateSyncBadge('local'); });
 
-            // الاستماع المباشر للمصروفات لتجنب التكرار
             onSnapshot(collection(window.db, EXPENSES_COLLECTION), (snapshot) => {
                 const fetchedExpenses = [];
                 snapshot.forEach(docSnap => { fetchedExpenses.push({ id: docSnap.id, ...docSnap.data() }); });
@@ -483,6 +605,111 @@
                 }
             });
         }
+
+        // --- Calculation Update Functions ---
+        window.updateStats = function() {
+            let delivered = 0;
+            let pending = 0;
+            let totalReceived = 0;
+
+            window.packages.forEach(p => {
+                const total = parseFloat(p.totalAmount) || 0;
+                const paid = parseFloat(p.paidAmount) || 0;
+
+                if (p.deliveryStatus === 'delivered') {
+                    delivered++;
+                    // إذا استلم الطرد، فالمبلغ المحصل فعلياً هو كاملاً إجمالي السعر
+                    totalReceived += total;
+                } else {
+                    pending++;
+                    // إذا لم يستلم بعد، فالمبلغ المحصل فعلياً هو قيمة العربون المدفوع
+                    totalReceived += paid;
+                }
+            });
+
+            let totalExpenses = window.expenses.reduce((sum, e) => sum + (parseFloat(e.amount) || 0), 0);
+            let netTotal = totalReceived - totalExpenses;
+
+            document.getElementById('statDeliveredCount').innerText = delivered;
+            document.getElementById('statPendingCount').innerText = pending;
+            document.getElementById('statTotalReceived').innerText = totalReceived.toFixed(2);
+            document.getElementById('statTotalExpenses').innerText = totalExpenses.toFixed(2);
+            document.getElementById('statNetTotal').innerText = netTotal.toFixed(2);
+        };
+
+        window.renderPackages = function() {
+            const container = document.getElementById('packageList');
+            const search = document.getElementById('searchInput').value.toLowerCase().trim();
+            document.getElementById('clearSearchBtn').classList.toggle('hidden', search === '');
+
+            let filtered = window.packages.filter(p => {
+                const matchesSearch = (p.customerName || '').toLowerCase().includes(search) || 
+                                     (p.phoneNumber || '').includes(search) || 
+                                     (p.trackingNumber || '').toLowerCase().includes(search);
+                if (!matchesSearch) return false;
+
+                if (window.currentFilter === 'pending') return p.deliveryStatus !== 'delivered';
+                if (window.currentFilter === 'delivered') return p.deliveryStatus === 'delivered';
+                if (window.currentFilter === 'hasBalance') {
+                    const remaining = (parseFloat(p.totalAmount) || 0) - (parseFloat(p.paidAmount) || 0);
+                    return remaining > 0 && p.deliveryStatus !== 'delivered';
+                }
+                return true;
+            });
+
+            if (filtered.length === 0) {
+                container.innerHTML = '';
+                document.getElementById('emptyState').classList.remove('hidden');
+                return;
+            }
+
+            document.getElementById('emptyState').classList.add('hidden');
+
+            container.innerHTML = filtered.map(p => {
+                const total = parseFloat(p.totalAmount) || 0;
+                const paid = parseFloat(p.paidAmount) || 0;
+                const remaining = total - paid;
+                const isDelivered = p.deliveryStatus === 'delivered';
+
+                return `
+                <div class="glass-card list-row-hover p-4 rounded-2xl flex flex-col md:flex-row items-start md:items-center justify-between gap-4">
+                    <div class="flex items-center space-x-3.5 space-x-reverse">
+                        <div class="w-10 h-10 rounded-xl ${isDelivered ? 'bg-teal-500/10 text-teal-600' : 'bg-amber-500/10 text-amber-600'} flex items-center justify-center font-black">
+                            <i class="ph-bold ${isDelivered ? 'ph-check-circle' : 'ph-clock'} text-xl"></i>
+                        </div>
+                        <div>
+                            <div class="flex items-center space-x-2 space-x-reverse">
+                                <h4 class="font-extrabold text-sm text-slate-800">${p.customerName || 'بدون اسم'}</h4>
+                                ${p.notes ? `<span class="text-[11px] text-cyan-700 bg-cyan-100/70 px-2 py-0.5 rounded-md font-bold">${p.notes}</span>` : ''}
+                            </div>
+                            <div class="flex items-center space-x-3 space-x-reverse text-xs text-slate-500 font-semibold mt-0.5">
+                                ${p.phoneNumber ? `<span><i class="ph-bold ph-phone text-cyan-600"></i> ${p.phoneNumber}</span>` : ''}
+                                ${p.trackingNumber ? `<span><i class="ph-bold ph-barcode text-cyan-600"></i> ${p.trackingNumber}</span>` : ''}
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="flex items-center justify-between w-full md:w-auto md:space-x-6 md:space-x-reverse border-t md:border-t-0 pt-3 md:pt-0 border-slate-100">
+                        <div class="text-right sm:text-left">
+                            <span class="text-[10px] font-extrabold text-slate-400 block uppercase">المتبقي / الإجمالي</span>
+                            <div class="text-xs font-black">
+                                <span class="${remaining > 0 && !isDelivered ? 'text-rose-500' : 'text-teal-600'}">${isDelivered ? '0.00 (تم الفل)' : remaining.toFixed(2)}</span>
+                                <span class="text-slate-400"> / ${total.toFixed(2)}</span>
+                            </div>
+                        </div>
+
+                        <div class="flex items-center space-x-1.5 space-x-reverse">
+                            <button onclick="toggleDeliveryStatus('${p.id}')" class="px-3 py-1.5 rounded-xl text-xs font-black ${isDelivered ? 'bg-teal-500 text-white' : 'bg-slate-100 text-slate-600 hover:bg-teal-50 hover:text-teal-600'} transition-all">
+                                ${isDelivered ? 'مستلم ✅' : 'استلام'}
+                            </button>
+                            <button onclick="openEditModal('${p.id}')" class="w-8 h-8 rounded-lg text-cyan-600 hover:bg-cyan-50 flex items-center justify-center"><i class="ph-bold ph-pencil-simple text-base"></i></button>
+                            <button onclick="confirmDeletePackage('${p.id}')" class="w-8 h-8 rounded-lg text-rose-500 hover:bg-rose-50 flex items-center justify-center"><i class="ph-bold ph-trash text-base"></i></button>
+                        </div>
+                    </div>
+                </div>
+                `;
+            }).join('');
+        };
 
         window.handleAuthSubmit = function(e) {
             e.preventDefault();
@@ -503,302 +730,274 @@
             window.isLoggedIn = false;
             localStorage.removeItem('shein_is_logged_in');
             document.getElementById('authScreen').classList.remove('hidden');
-            document.getElementById('authUsername').value = '';
-            document.getElementById('authPassword').value = '';
-            showToast("تم تسجيل الخروج", "success");
         };
 
-        window.openChangePasswordModal = () => document.getElementById('changePasswordModal').classList.remove('hidden');
-        window.closeChangePasswordModal = () => document.getElementById('changePasswordModal').classList.add('hidden');
-
-        window.handleChangePasswordSubmit = async function(e) {
-            e.preventDefault();
-            const cur = document.getElementById('currentPassword').value;
-            const nw = document.getElementById('newPassword').value;
-            const cnf = document.getElementById('confirmNewPassword').value;
-            if (cur !== window.systemConfig.password) { showToast("كلمة المرور الحالية غير صحيحة", "error"); return; }
-            if (nw !== cnf) { showToast("كلمات المرور الجديدة غير متطابقة", "error"); return; }
-            window.systemConfig.password = nw;
-            localStorage.setItem('shein_system_config', JSON.stringify(window.systemConfig));
-            if (window.db) { await setDoc(doc(window.db, CONFIG_DOC_PATH), window.systemConfig); }
-            closeChangePasswordModal();
-            showToast("تم تحديث كلمة المرور بنجاح", "success");
+        window.openModal = function() {
+            document.getElementById('packageForm').reset();
+            document.getElementById('packageId').value = '';
+            document.getElementById('modalTitle').innerText = 'إضافة طرد جديد';
+            document.getElementById('packageModal').classList.remove('hidden');
+            calculateRemaining();
         };
 
-        window.updateSyncBadge = function(status) {
-            const badge = document.getElementById('syncBadge');
-            if (status === 'synced') {
-                badge.className = "text-[11px] font-bold px-3 py-0.5 rounded-full bg-teal-500/10 text-teal-600 border border-teal-500/20 flex items-center space-x-1.5 space-x-reverse";
-                badge.innerHTML = `<i class="ph-bold ph-cloud-check text-xs"></i><span>متزامن سحابياً</span>`;
-            } else {
-                badge.className = "text-[11px] font-bold px-3 py-0.5 rounded-full bg-amber-500/10 text-amber-600 border border-amber-500/20 flex items-center space-x-1.5 space-x-reverse";
-                badge.innerHTML = `<i class="ph-bold ph-hard-drive text-xs"><span>محلي</span>`;
-            }
+        window.closeModal = function() {
+            document.getElementById('packageModal').classList.add('hidden');
         };
 
         window.calculateRemaining = function() {
             const total = parseFloat(document.getElementById('totalAmount').value) || 0;
             const paid = parseFloat(document.getElementById('paidAmount').value) || 0;
-            document.getElementById('remainingPreview').innerText = Math.max(0, total - paid).toFixed(2);
+            const rem = Math.max(0, total - paid);
+            document.getElementById('remainingPreview').innerText = rem.toFixed(2);
         };
 
         window.autoFillPaidOnModal = function() {
-            const radios = document.getElementsByName('deliveryStatus');
-            let status = 'pending';
-            radios.forEach(r => { if(r.checked) status = r.value; });
-            const total = parseFloat(document.getElementById('totalAmount').value) || 0;
-            const paidInput = document.getElementById('paidAmount');
-            if (status === 'delivered') {
-                paidInput.value = total;
+            const isDelivered = document.querySelector('input[name="deliveryStatus"]:checked').value === 'delivered';
+            if (isDelivered) {
+                const total = document.getElementById('totalAmount').value;
+                if (total) document.getElementById('paidAmount').value = total;
             }
             calculateRemaining();
         };
 
-        window.openModal = function(pkg = null) {
-            document.getElementById('packageModal').classList.remove('hidden');
-            if (pkg) {
-                document.getElementById('modalTitle').innerText = 'تعديل بيانات الطرد';
-                document.getElementById('packageId').value = pkg.id;
-                document.getElementById('packageCreatedAt').value = pkg.createdAt || '';
-                document.getElementById('customerName').value = pkg.customerName || '';
-                document.getElementById('phoneNumber').value = pkg.phoneNumber || '';
-                document.getElementById('trackingNumber').value = pkg.trackingNumber || '';
-                document.getElementById('totalAmount').value = pkg.totalAmount || 0;
-                document.getElementById('paidAmount').value = pkg.paidAmount || 0;
-                document.getElementById('notes').value = pkg.notes || '';
-                document.getElementsByName('deliveryStatus').forEach(r => r.checked = (r.value === pkg.deliveryStatus));
-            } else {
-                document.getElementById('modalTitle').innerText = 'إضافة طرد جديد';
-                document.getElementById('packageForm').reset();
-                document.getElementById('packageId').value = '';
-                document.getElementById('packageCreatedAt').value = '';
-                document.getElementsByName('deliveryStatus').forEach(r => { r.checked = (r.value === 'pending'); });
-                document.getElementById('remainingPreview').innerText = '0.00';
-            }
-        };
-        window.closeModal = () => document.getElementById('packageModal').classList.add('hidden');
-
         window.handleFormSubmit = async function(e) {
             e.preventDefault();
-            const now = new Date().toISOString();
             const id = document.getElementById('packageId').value || 'pkg_' + Date.now();
-            const createdAt = document.getElementById('packageCreatedAt').value || now;
-            const totalAmount = parseFloat(document.getElementById('totalAmount').value) || 0;
-            let deliveryStatus = 'pending';
-            document.getElementsByName('deliveryStatus').forEach(r => { if(r.checked) deliveryStatus = r.value; });
-
-            let paidAmount = parseFloat(document.getElementById('paidAmount').value) || 0;
-            if (deliveryStatus === 'delivered') {
-                paidAmount = totalAmount; 
-            }
-
             const pkgData = {
                 customerName: document.getElementById('customerName').value.trim(),
                 phoneNumber: document.getElementById('phoneNumber').value.trim(),
                 trackingNumber: document.getElementById('trackingNumber').value.trim(),
-                totalAmount, paidAmount, remainingAmount: (deliveryStatus === 'delivered') ? 0 : Math.max(0, totalAmount - paidAmount),
-                deliveryStatus, notes: document.getElementById('notes').value.trim(),
-                createdAt, updatedAt: now
+                totalAmount: parseFloat(document.getElementById('totalAmount').value) || 0,
+                paidAmount: parseFloat(document.getElementById('paidAmount').value) || 0,
+                deliveryStatus: document.querySelector('input[name="deliveryStatus"]:checked').value,
+                notes: document.getElementById('notes').value.trim(),
+                createdAt: document.getElementById('packageCreatedAt').value || new Date().toISOString()
             };
 
-            if (window.db) { await setDoc(doc(window.db, COLLECTION_NAME, id), pkgData); }
-            const index = window.packages.findIndex(p => p.id === id);
-            if (index >= 0) window.packages[index] = { id, ...pkgData };
-            else window.packages.unshift({ id, ...pkgData });
-            localStorage.setItem('shein_packages_data', JSON.stringify(window.packages));
+            if (window.db) {
+                await setDoc(doc(window.db, COLLECTION_NAME, id), pkgData);
+            } else {
+                const idx = window.packages.findIndex(p => p.id === id);
+                if (idx > -1) window.packages[idx] = { id, ...pkgData };
+                else window.packages.push({ id, ...pkgData });
+                localStorage.setItem('shein_packages_data', JSON.stringify(window.packages));
+                renderPackages();
+                updateStats();
+            }
 
             closeModal();
-            renderPackages();
-            updateStats();
-            showToast("تم حفظ الطرد بنجاح", "success");
+            showToast("تم حفظ بيانات الطرد بنجاح", "success");
+            if (window.gdriveToken) uploadDataToDrive();
+        };
+
+        window.openEditModal = function(id) {
+            const pkg = window.packages.find(p => p.id === id);
+            if (!pkg) return;
+            document.getElementById('packageId').value = pkg.id;
+            document.getElementById('customerName').value = pkg.customerName || '';
+            document.getElementById('phoneNumber').value = pkg.phoneNumber || '';
+            document.getElementById('trackingNumber').value = pkg.trackingNumber || '';
+            document.getElementById('totalAmount').value = pkg.totalAmount || '';
+            document.getElementById('paidAmount').value = pkg.paidAmount || '';
+            document.getElementById('notes').value = pkg.notes || '';
+            document.getElementById('packageCreatedAt').value = pkg.createdAt || '';
+
+            const statusRadio = document.querySelector(`input[name="deliveryStatus"][value="${pkg.deliveryStatus || 'pending'}"]`);
+            if (statusRadio) statusRadio.checked = true;
+
+            document.getElementById('modalTitle').innerText = 'تعديل بيانات الطرد';
+            document.getElementById('packageModal').classList.remove('hidden');
+            calculateRemaining();
         };
 
         window.toggleDeliveryStatus = async function(id) {
             const pkg = window.packages.find(p => p.id === id);
             if (!pkg) return;
-            
-            pkg.deliveryStatus = (pkg.deliveryStatus === 'delivered') ? 'pending' : 'delivered';
-            if (pkg.deliveryStatus === 'delivered') { 
-                pkg.paidAmount = pkg.totalAmount; // سداد كامل المبلغ وتصفير الرصيد
-                pkg.remainingAmount = 0;           
-            } else { 
-                pkg.remainingAmount = Math.max(0, pkg.totalAmount - (pkg.paidAmount || 0)); 
-            }
-            pkg.updatedAt = new Date().toISOString();
+            const newStatus = pkg.deliveryStatus === 'delivered' ? 'pending' : 'delivered';
+            const updated = { ...pkg, deliveryStatus: newStatus };
+            if (newStatus === 'delivered') updated.paidAmount = pkg.totalAmount;
 
-            if (window.db) { await setDoc(doc(window.db, COLLECTION_NAME, id), pkg); }
-            localStorage.setItem('shein_packages_data', JSON.stringify(window.packages));
-            renderPackages();
-            updateStats();
-            showToast("تم تحديث حالة التسليم والسداد بنجاح", "success");
-        };
-
-        window.confirmDelete = function(id) {
-            const modal = document.getElementById('deleteConfirmModal');
-            modal.classList.remove('hidden');
-            document.getElementById('confirmDeleteBtn').onclick = async function() {
-                if (window.db) { await deleteDoc(doc(window.db, COLLECTION_NAME, id)); }
-                window.packages = window.packages.filter(p => p.id !== id);
+            if (window.db) {
+                await setDoc(doc(window.db, COLLECTION_NAME, id), updated);
+            } else {
+                const idx = window.packages.findIndex(p => p.id === id);
+                window.packages[idx] = updated;
                 localStorage.setItem('shein_packages_data', JSON.stringify(window.packages));
-                modal.classList.add('hidden');
                 renderPackages();
                 updateStats();
-                showToast("تم الحذف بنجاح", "success");
+            }
+            showToast(newStatus === 'delivered' ? "تم التسليم وتعديل الحساب" : "تم تحويل الحالة إلى لم يستلم", "info");
+            if (window.gdriveToken) uploadDataToDrive();
+        };
+
+        window.confirmDeletePackage = function(id) {
+            document.getElementById('deleteConfirmModal').classList.remove('hidden');
+            document.getElementById('confirmDeleteBtn').onclick = async () => {
+                if (window.db) {
+                    await deleteDoc(doc(window.db, COLLECTION_NAME, id));
+                } else {
+                    window.packages = window.packages.filter(p => p.id !== id);
+                    localStorage.setItem('shein_packages_data', JSON.stringify(window.packages));
+                    renderPackages();
+                    updateStats();
+                }
+                closeDeleteModal();
+                showToast("تم حذف الطرد بنجاح", "success");
+                if (window.gdriveToken) uploadDataToDrive();
             };
         };
-        window.closeDeleteModal = () => document.getElementById('deleteConfirmModal').classList.add('hidden');
 
-        window.openExpensesModal = () => { document.getElementById('expensesModal').classList.remove('hidden'); renderExpensesList(); };
-        window.closeExpensesModal = () => document.getElementById('expensesModal').classList.add('hidden');
+        window.closeDeleteModal = function() {
+            document.getElementById('deleteConfirmModal').classList.add('hidden');
+        };
+
+        // --- Expenses Management Logic ---
+        window.openExpensesModal = function() {
+            document.getElementById('expenseForm').reset();
+            renderExpensesList();
+            document.getElementById('expensesModal').classList.remove('hidden');
+        };
+
+        window.closeExpensesModal = function() {
+            document.getElementById('expensesModal').classList.add('hidden');
+        };
 
         window.handleExpenseSubmit = async function(e) {
             e.preventDefault();
-            const title = document.getElementById('expenseTitle').value.trim();
-            const amount = parseFloat(document.getElementById('expenseAmount').value) || 0;
-            const expId = 'exp_' + Date.now();
-            const expData = { title, amount, createdAt: new Date().toISOString() };
+            const id = 'exp_' + Date.now();
+            const expData = {
+                title: document.getElementById('expenseTitle').value.trim(),
+                amount: parseFloat(document.getElementById('expenseAmount').value) || 0,
+                createdAt: new Date().toISOString()
+            };
 
-            if (window.db) { await setDoc(doc(window.db, EXPENSES_COLLECTION, expId), expData); }
+            if (window.db) {
+                await setDoc(doc(window.db, EXPENSES_COLLECTION, id), expData);
+            } else {
+                window.expenses.push({ id, ...expData });
+                localStorage.setItem('shein_expenses_data', JSON.stringify(window.expenses));
+                updateStats();
+                renderExpensesList();
+            }
+
             document.getElementById('expenseForm').reset();
-            renderExpensesList();
-            updateStats();
-            showToast("تم إضافة المصروف", "success");
-        };
-
-        window.deleteExpense = async function(id) {
-            if (window.db) { await deleteDoc(doc(window.db, EXPENSES_COLLECTION, id)); }
-            window.expenses = window.expenses.filter(e => e.id !== id);
-            localStorage.setItem('shein_expenses_data', JSON.stringify(window.expenses));
-            renderExpensesList();
-            updateStats();
-            showToast("تم حذف المصروف", "success");
+            showToast("تم توثيق المنصرف بنجاح", "success");
+            if (window.gdriveToken) uploadDataToDrive();
         };
 
         window.renderExpensesList = function() {
             const container = document.getElementById('expensesListContainer');
-            if (window.expenses.length === 0) { container.innerHTML = `<p class="text-xs text-slate-400 text-center py-4">لا توجد مصروفات</p>`; return; }
-            container.innerHTML = window.expenses.map(exp => `
-                <div class="flex items-center justify-between p-3 bg-white border border-slate-200 rounded-xl">
+            if (window.expenses.length === 0) {
+                container.innerHTML = `<p class="text-center text-xs text-slate-400 py-3">لا يوجد منصرفات مسجلة بعد</p>`;
+                return;
+            }
+            container.innerHTML = window.expenses.map(e => `
+                <div class="flex items-center justify-between p-3 bg-slate-50 border border-slate-200 rounded-xl text-xs">
                     <div>
-                        <span class="text-xs font-black text-slate-800 block">${exp.title}</span>
-                        <span class="text-[10px] text-slate-400">${new Date(exp.createdAt).toLocaleDateString('ar-EG')}</span>
+                        <span class="font-extrabold text-slate-800">${e.title}</span>
+                        <span class="text-[10px] text-slate-400 block">${new Date(e.createdAt).toLocaleDateString('ar-EG')}</span>
                     </div>
-                    <div class="flex items-center space-x-3 space-x-reverse">
-                        <span class="text-xs font-black text-amber-600">${exp.amount.toFixed(2)} ₪</span>
-                        <button onclick="deleteExpense('${exp.id}')" class="w-7 h-7 rounded-lg text-rose-500 hover:bg-rose-50 flex items-center justify-center"><i class="ph-bold ph-trash"></i></button>
+                    <div class="flex items-center space-x-2 space-x-reverse">
+                        <span class="font-black text-rose-500">-${(parseFloat(e.amount)||0).toFixed(2)}</span>
+                        <button onclick="deleteExpense('${e.id}')" class="text-slate-400 hover:text-rose-500"><i class="ph-bold ph-trash text-sm"></i></button>
                     </div>
                 </div>
             `).join('');
         };
 
+        window.deleteExpense = async function(id) {
+            if (window.db) {
+                await deleteDoc(doc(window.db, EXPENSES_COLLECTION, id));
+            } else {
+                window.expenses = window.expenses.filter(e => e.id !== id);
+                localStorage.setItem('shein_expenses_data', JSON.stringify(window.expenses));
+                updateStats();
+                renderExpensesList();
+            }
+            showToast("تم حذف المنصرف", "info");
+            if (window.gdriveToken) uploadDataToDrive();
+        };
+
         window.setFilter = function(filter) {
             window.currentFilter = filter;
-            document.querySelectorAll('.filter-btn').forEach(btn => btn.className = "filter-btn px-4 py-2.5 rounded-xl text-xs font-bold text-slate-600 bg-slate-100");
-            const active = document.getElementById(`filter-${filter}`);
-            if (active) active.className = "filter-btn px-4 py-2.5 rounded-xl text-xs font-black bg-gradient-to-r from-cyan-500 to-teal-500 text-white shadow-md";
+            document.querySelectorAll('.filter-btn').forEach(btn => {
+                btn.className = 'filter-btn px-4 py-2.5 rounded-xl text-xs font-bold text-slate-600 bg-slate-100';
+            });
+            const activeBtn = document.getElementById(`filter-${filter}`);
+            if (activeBtn) activeBtn.className = 'filter-btn px-4 py-2.5 rounded-xl text-xs font-black bg-gradient-to-r from-cyan-500 to-teal-500 text-white shadow-md';
             renderPackages();
         };
 
-        window.clearSearch = () => { document.getElementById('searchInput').value = ''; renderPackages(); };
-
-        function getPackageTimestamp(p) {
-            if (p.createdAt) return new Date(p.createdAt).getTime();
-            if (p.id && p.id.startsWith('pkg_')) { const ts = parseInt(p.id.replace('pkg_', ''), 10); if (!isNaN(ts)) return ts; }
-            return 0;
-        }
-
-        window.renderPackages = function() {
-            const query = document.getElementById('searchInput').value.trim().toLowerCase();
-            const sorted = [...window.packages].sort((a, b) => getPackageTimestamp(b) - getPackageTimestamp(a));
-
-            const filtered = sorted.filter(p => {
-                const matchQuery = !query || (p.customerName && p.customerName.toLowerCase().includes(query)) || (p.phoneNumber && p.phoneNumber.toLowerCase().includes(query)) || (p.trackingNumber && p.trackingNumber.toLowerCase().includes(query));
-                if (!matchQuery) return false;
-                if (window.currentFilter === 'pending') return p.deliveryStatus === 'pending';
-                if (window.currentFilter === 'delivered') return p.deliveryStatus === 'delivered';
-                if (window.currentFilter === 'hasBalance') return (parseFloat(p.totalAmount) - parseFloat(p.paidAmount || 0)) > 0;
-                return true;
-            });
-
-            const container = document.getElementById('packageList');
-            const emptyState = document.getElementById('emptyState');
-
-            if (filtered.length === 0) { container.innerHTML = ''; emptyState.classList.remove('hidden'); return; }
-            emptyState.classList.add('hidden');
-
-            container.innerHTML = filtered.map(p => {
-                const total = parseFloat(p.totalAmount) || 0;
-                const paid = parseFloat(p.paidAmount) || 0;
-                const remaining = Math.max(0, total - paid);
-                const isDelivered = p.deliveryStatus === 'delivered';
-
-                return `
-                    <div class="glass-card p-4 rounded-2xl list-row-hover flex flex-col md:flex-row items-start md:items-center justify-between gap-4 border border-cyan-100">
-                        <div class="flex items-start space-x-3.5 space-x-reverse w-full md:w-auto">
-                            <div class="w-11 h-11 rounded-2xl ${isDelivered ? 'bg-teal-50 text-teal-600' : 'bg-amber-50 text-amber-600'} flex items-center justify-center text-xl flex-shrink-0">
-                                <i class="ph-bold ${isDelivered ? 'ph-check-circle' : 'ph-clock'}"></i>
-                            </div>
-                            <div class="space-y-1">
-                                <div class="flex flex-wrap items-center gap-2">
-                                    <h3 class="text-sm font-black text-slate-800">${p.customerName}</h3>
-                                    ${p.phoneNumber ? `<a href="https://wa.me/${p.phoneNumber}" target="_blank" class="text-[11px] font-bold text-teal-600 bg-teal-50 px-2.5 py-0.5 rounded-full flex items-center space-x-1 space-x-reverse"><i class="ph-bold ph-whatsapp-logo"></i><span>${p.phoneNumber}</span></a>` : ''}
-                                </div>
-                                <div class="flex flex-wrap items-center gap-3 text-xs text-slate-500 font-bold">
-                                    ${p.trackingNumber ? `<span>تتبع: <strong class="text-cyan-700">${p.trackingNumber}</strong></span>` : ''}
-                                    ${p.notes ? `<span class="bg-cyan-50/60 text-cyan-900 px-2 py-0.5 rounded-lg border border-cyan-100">ملاحظة: ${p.notes}</span>` : ''}
-                                </div>
-                            </div>
-                        </div>
-                        <div class="flex items-center justify-between md:justify-end w-full md:w-auto gap-4 pt-2 md:pt-0 border-t md:border-t-0 border-slate-100">
-                            <div class="text-left flex items-center space-x-4 space-x-reverse">
-                                <div><span class="text-[10px] text-slate-400 block">الإجمالي</span><span class="text-xs font-black text-slate-800">${total.toFixed(2)} ₪</span></div>
-                                <div><span class="text-[10px] text-slate-400 block">المتبقي</span><span class="text-xs font-black ${remaining > 0 ? 'text-rose-500' : 'text-teal-600'}">${remaining.toFixed(2)} ₪</span></div>
-                            </div>
-                            <div class="flex items-center space-x-1.5 space-x-reverse">
-                                <button onclick="toggleDeliveryStatus('${p.id}')" class="px-3 py-2 rounded-xl text-xs font-bold ${isDelivered ? 'bg-teal-50 text-teal-700' : 'bg-amber-50 text-amber-700'}">
-                                    <span>${isDelivered ? 'تم الاستلام' : 'قيد الانتظار'}</span>
-                                </button>
-                                <button onclick='openModal(${JSON.stringify(p)})' class="w-9 h-9 rounded-xl bg-slate-100 text-cyan-700 flex items-center justify-center"><i class="ph-bold ph-pencil-simple"></i></button>
-                                <button onclick="confirmDelete('${p.id}')" class="w-9 h-9 rounded-xl bg-slate-100 text-rose-500 flex items-center justify-center"><i class="ph-bold ph-trash"></i></button>
-                            </div>
-                        </div>
-                    </div>
-                `;
-            }).join('');
-        };
-
-        window.updateStats = function() {
-            document.getElementById('statDeliveredCount').innerText = window.packages.filter(p => p.deliveryStatus === 'delivered').length;
-            document.getElementById('statPendingCount').innerText = window.packages.length - window.packages.filter(p => p.deliveryStatus === 'delivered').length;
-            
-            const totalAmount = window.packages.reduce((sum, p) => sum + (parseFloat(p.totalAmount) || 0), 0);
-            
-            const totalRemaining = window.packages
-                .filter(p => p.deliveryStatus !== 'delivered')
-                .reduce((sum, p) => sum + (parseFloat(p.remainingAmount) || (parseFloat(p.totalAmount) - parseFloat(p.paidAmount || 0))), 0);
-            
-            const totalExpenses = window.expenses.reduce((sum, e) => sum + (parseFloat(e.amount) || 0), 0);
-            
-            document.getElementById('statTotalAmount').innerText = (totalAmount - totalExpenses).toFixed(2);
-            document.getElementById('statTotalRemaining').innerText = totalRemaining.toFixed(2);
-            document.getElementById('statTotalExpenses').innerText = totalExpenses.toFixed(2);
+        window.clearSearch = function() {
+            document.getElementById('searchInput').value = '';
+            renderPackages();
         };
 
         window.refreshPageData = function() {
             const icon = document.getElementById('refreshIcon');
             icon.classList.add('animate-spin');
-            setTimeout(() => { icon.classList.remove('animate-spin'); renderPackages(); updateStats(); showToast("تم التحديث", "success"); }, 500);
+            renderPackages();
+            updateStats();
+            setTimeout(() => icon.classList.remove('animate-spin'), 600);
+            showToast("تم تحديث الشاشة", "info");
         };
 
-        window.showToast = function(msg, type = 'success') {
+        window.openChangePasswordModal = function() {
+            document.getElementById('changePasswordForm').reset();
+            document.getElementById('changePasswordModal').classList.remove('hidden');
+        };
+
+        window.closeChangePasswordModal = function() {
+            document.getElementById('changePasswordModal').classList.add('hidden');
+        };
+
+        window.handleChangePasswordSubmit = async function(e) {
+            e.preventDefault();
+            const curr = document.getElementById('currentPassword').value.trim();
+            const newP = document.getElementById('newPassword').value.trim();
+            const conf = document.getElementById('confirmNewPassword').value.trim();
+
+            if (curr !== window.systemConfig.password) {
+                showToast("كلمة المرور الحالية غير صحيحة", "error");
+                return;
+            }
+            if (newP !== conf) {
+                showToast("كلمة المرور الجديدة غير متطابقة", "error");
+                return;
+            }
+
+            window.systemConfig.password = newP;
+            localStorage.setItem('shein_system_config', JSON.stringify(window.systemConfig));
+
+            if (window.db) {
+                await setDoc(doc(window.db, CONFIG_DOC_PATH), window.systemConfig);
+            }
+
+            closeChangePasswordModal();
+            showToast("تم تحديث كلمة المرور بنجاح", "success");
+        };
+
+        function showToast(msg, type = 'success') {
             const toast = document.getElementById('toast');
-            document.getElementById('toastMsg').innerText = msg;
-            document.getElementById('toastIcon').className = type === 'success' ? "ph-bold ph-check-circle text-teal-400 text-lg" : "ph-bold ph-info text-amber-400 text-lg";
-            toast.style.opacity = '1'; toast.style.transform = 'translate(-50%, 0)';
-            setTimeout(() => { toast.style.opacity = '0'; toast.style.transform = 'translate(-50%, 15px)'; }, 3500);
-        };
+            const toastMsg = document.getElementById('toastMsg');
+            const toastIcon = document.getElementById('toastIcon');
 
+            toastMsg.innerText = msg;
+            if (type === 'error') toastIcon.className = 'ph-bold ph-x-circle text-rose-400 text-lg';
+            else if (type === 'info') toastIcon.className = 'ph-bold ph-info text-amber-400 text-lg';
+            else toastIcon.className = 'ph-bold ph-check-circle text-teal-400 text-lg';
+
+            toast.classList.remove('opacity-0', 'pointer-events-none');
+            setTimeout(() => toast.classList.add('opacity-0', 'pointer-events-none'), 3000);
+        }
+
+        // Initialize Application & GDrive
         initFirebase();
+        window.addEventListener('load', () => {
+            if (typeof google !== 'undefined') {
+                window.initGoogleDrive();
+            }
+        });
     </script>
 </body>
 </html>
