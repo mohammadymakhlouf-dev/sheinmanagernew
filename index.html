@@ -128,10 +128,10 @@
                     <span class="hidden sm:inline">المصروفات</span>
                 </button>
 
-                <!-- Google Drive Sync Button -->
+                <!-- Google Drive Sync Button (Allows Account Selection) -->
                 <button id="googleDriveBtn" onclick="handleGoogleDriveSync()" class="flex items-center space-x-2 space-x-reverse bg-orange-600 text-white text-xs font-black px-4 py-2.5 rounded-xl shadow-md shadow-orange-600/20 active:scale-95 transition-all">
                     <i class="ph-bold ph-google-drive text-lg"></i>
-                    <span class="hidden sm:inline" id="driveBtnText">جوجل درايف</span>
+                    <span class="hidden sm:inline" id="driveBtnText">اختر حساب جوجل للمزامنة</span>
                 </button>
 
                 <!-- Notification Permission Button -->
@@ -366,8 +366,8 @@
             measurementId: "G-JBL21T1DZ0"
         };
 
-        // Google Drive Configuration
-        const GOOGLE_CLIENT_ID = '292671039190-sheinapp.apps.googleusercontent.com'; // معرف العميل
+        // Client ID الجديد المدمج هنا مباشرة
+        const GOOGLE_CLIENT_ID = '292671039190-j4ai2jo6baegvljn63ujut35qalpreg.apps.googleusercontent.com';
         const SCOPES = 'https://www.googleapis.com/auth/drive.file';
 
         const COLLECTION_NAME = 'shein_packages';
@@ -393,23 +393,24 @@
             navigator.serviceWorker.register('sw.js').catch(e => console.log(e));
         }
 
-        // --- Google Drive Authentication & Sync Logic ---
+        // --- Google Drive Authentication & Multi-Account Selection ---
         let tokenClient;
 
         window.initGoogleDrive = function() {
             if (typeof google === 'undefined') return;
+            
             tokenClient = google.accounts.oauth2.initTokenClient({
                 client_id: GOOGLE_CLIENT_ID,
                 scope: SCOPES,
                 callback: async (response) => {
                     if (response.error !== undefined) {
-                        showToast("فشل تسجيل الدخول بحساب جوجل", "error");
+                        showToast("فشل تسجيل الدخول أو تم إلغاء العملية", "error");
                         return;
                     }
                     window.gdriveToken = response.access_token;
                     localStorage.setItem('shein_gdrive_token', window.gdriveToken);
-                    document.getElementById('driveBtnText').innerText = "تم الربط مع Drive";
-                    showToast("تم ربط حساب جوجل بنجاح ☁️", "success");
+                    document.getElementById('driveBtnText').innerText = "تم الاتصال بجوجل درايف";
+                    showToast("تم اختيار الحساب والاتصال بنجاح ☁️", "success");
                     await uploadDataToDrive();
                 },
             });
@@ -423,15 +424,13 @@
             if (!tokenClient) {
                 window.initGoogleDrive();
             }
-            if (!window.gdriveToken) {
-                tokenClient.requestAccessToken({ prompt: 'consent' });
-            } else {
-                uploadDataToDrive();
+            if (tokenClient) {
+                tokenClient.requestAccessToken({ prompt: 'select_account' });
             }
         };
 
         async function uploadDataToDrive() {
-            showToast("جاري مزامنة البيانات مع Google Drive...", "info");
+            showToast("جاري رفع ومزامنة البيانات مع Google Drive...", "info");
             const backupData = {
                 packages: window.packages,
                 expenses: window.expenses,
@@ -445,7 +444,6 @@
             };
 
             try {
-                // البحث عما إذا كان الملف موجوداً مسبقاً للتحديث
                 const searchRes = await fetch('https://www.googleapis.com/drive/v3/files?q=name="shein_backup_data.json"+and+trashed=false', {
                     headers: { 'Authorization': `Bearer ${window.gdriveToken}` }
                 });
@@ -475,12 +473,12 @@
                 });
 
                 if (res.ok) {
-                    showToast("تم حفظ وتحديث النسخة الاحتياطية على Google Drive بنجاح ✅", "success");
+                    showToast("تم تحديث النسخة الاحتياطية على Google Drive بنجاح ✅", "success");
                 } else {
                     if (res.status === 401) {
                         localStorage.removeItem('shein_gdrive_token');
                         window.gdriveToken = null;
-                        tokenClient.requestAccessToken({ prompt: '' });
+                        tokenClient.requestAccessToken({ prompt: 'select_account' });
                     } else {
                         showToast("حدث خطأ أثناء الرفع إلى Google Drive", "error");
                     }
@@ -606,7 +604,6 @@
             });
         }
 
-        // --- Calculation Update Functions ---
         window.updateStats = function() {
             let delivered = 0;
             let pending = 0;
@@ -618,11 +615,9 @@
 
                 if (p.deliveryStatus === 'delivered') {
                     delivered++;
-                    // إذا استلم الطرد، فالمبلغ المحصل فعلياً هو كاملاً إجمالي السعر
                     totalReceived += total;
                 } else {
                     pending++;
-                    // إذا لم يستلم بعد، فالمبلغ المحصل فعلياً هو قيمة العربون المدفوع
                     totalReceived += paid;
                 }
             });
@@ -851,7 +846,6 @@
             document.getElementById('deleteConfirmModal').classList.add('hidden');
         };
 
-        // --- Expenses Management Logic ---
         window.openExpensesModal = function() {
             document.getElementById('expenseForm').reset();
             renderExpensesList();
@@ -991,7 +985,6 @@
             setTimeout(() => toast.classList.add('opacity-0', 'pointer-events-none'), 3000);
         }
 
-        // Initialize Application & GDrive
         initFirebase();
         window.addEventListener('load', () => {
             if (typeof google !== 'undefined') {
