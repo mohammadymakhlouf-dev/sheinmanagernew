@@ -5,7 +5,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>منصة إدارة طرود شي إن الاحترافية</title>
 
-    <!-- PWA Manifest & Theme Color (تمت إضافتها هنا لربط التثبيت) -->
+    <!-- PWA Manifest & Theme Color -->
     <link rel="manifest" href="manifest.json">
     <meta name="theme-color" content="#06b6d4">
 
@@ -378,7 +378,6 @@
             document.getElementById('displayUsername').innerText = window.systemConfig.username;
         }
 
-        // --- Sound & Notification Function ---
         window.playNotificationSound = function() {
             const sound = document.getElementById('soundNotification');
             if (sound) {
@@ -387,16 +386,15 @@
             }
         };
 
-        // --- Register Service Worker for Background Push Notifications ---
+        // --- Register Service Worker with Scope ---
         if ('serviceWorker' in navigator) {
-            navigator.serviceWorker.register('sw.js')
+            navigator.serviceWorker.register('./sw.js', { scope: './' })
                 .then(registration => {
                     console.log('Service Worker registered successfully:', registration);
                 })
                 .catch(err => console.error('Service Worker registration failed:', err));
         }
 
-        // --- Initialize Firebase & Messaging ---
         try {
             const app = initializeApp(firebaseConfig);
             window.db = getFirestore(app);
@@ -421,7 +419,6 @@
         function setupFCM(app) {
             try {
                 window.messaging = getMessaging(app);
-                
                 Notification.requestPermission().then(permission => {
                     if (permission === 'granted') {
                         getToken(window.messaging, { serviceWorkerRegistration: navigator.serviceWorker.ready })
@@ -457,6 +454,7 @@
             }
         }
 
+        let isInitialLoad = true;
         function initFirestoreListeners() {
             if (!window.db) return;
 
@@ -466,6 +464,12 @@
                     remotePackages.push({ id: docSnap.id, ...docSnap.data() });
                 });
                 
+                if (!isInitialLoad && remotePackages.length !== window.packages.length) {
+                    playNotificationSound();
+                    sendSystemNotification("تحديث سحابي", "تم تحديث أو إضافة طرد جديد عبر السحابة");
+                }
+                isInitialLoad = false;
+
                 window.packages = remotePackages;
                 localStorage.setItem('shein_packages_data', JSON.stringify(window.packages));
                 updateDashboard();
@@ -475,8 +479,6 @@
                 document.getElementById('syncBadge').className = 'text-[11px] font-bold px-3 py-0.5 rounded-full bg-teal-500/10 text-teal-600 border border-teal-500/20 flex items-center space-x-1.5 space-x-reverse';
             }, (error) => {
                 console.error("Firestore Packages sync error:", error);
-                document.getElementById('syncBadge').innerHTML = '<i class="ph-bold ph-cloud-slash text-xs"></i><span>خطأ في الاتصال بالسحابة</span>';
-                document.getElementById('syncBadge').className = 'text-[11px] font-bold px-3 py-0.5 rounded-full bg-rose-500/10 text-rose-600 border border-rose-500/20 flex items-center space-x-1.5 space-x-reverse';
             });
 
             onSnapshot(collection(window.db, EXPENSES_COLLECTION), (snapshot) => {
@@ -493,7 +495,6 @@
             });
         }
 
-        // --- Auth Functions ---
         window.handleAuthSubmit = function(e) {
             e.preventDefault();
             const user = document.getElementById('authUsername').value.trim();
@@ -538,7 +539,6 @@
             showToast("تم تغيير كلمة المرور بنجاح", "success");
         };
 
-        // --- Package Logic & UI ---
         window.openModal = function(id = null) {
             document.getElementById('packageModal').classList.remove('hidden');
             document.getElementById('packageForm').reset();
@@ -631,7 +631,7 @@
             closeModal();
             updateDashboard();
             renderPackages();
-            sendSystemNotification("طرد جديد", `تم حفظ الطرد الخاص بـ ${customerName} بنجاح`);
+            sendSystemNotification("إشعار محلي", `تم حفظ الطرد الخاص بـ ${customerName} بنجاح`);
             showToast("تم حفظ الطرد بنجاح ✅", "success");
         };
 
@@ -692,7 +692,7 @@
 
             updateDashboard();
             renderPackages();
-            const msg = pkg.deliveryStatus === 'pending' ? `تم تحويل طرد ${pkg.customerName} إلى غير مستلم وتصفير المبلغ` : `تم استلام طرد ${pkg.customerName} بنجاح`;
+            const msg = pkg.deliveryStatus === 'pending' ? `تم تحويل طرد ${pkg.customerName} إلى غير مستلم` : `تم استلام طرد ${pkg.customerName} بنجاح`;
             sendSystemNotification("تحديث حالة الطرد", msg);
             showToast(msg, "success");
         };
@@ -817,7 +817,6 @@
             renderPackages();
         };
 
-        // --- Expenses Logic ---
         window.openExpensesModal = () => document.getElementById('expensesModal').classList.remove('hidden');
         window.closeExpensesModal = () => document.getElementById('expensesModal').classList.add('hidden');
 
@@ -883,7 +882,6 @@
             container.innerHTML = html;
         };
 
-        // --- Dashboard Metrics Calculation ---
         window.updateDashboard = function() {
             let deliveredCount = 0;
             let pendingCount = 0;
@@ -927,7 +925,6 @@
             }, 500);
         };
 
-        // --- Toast Utility ---
         window.showToast = function(msg, type = 'success') {
             const toast = document.getElementById('toast');
             const toastMsg = document.getElementById('toastMsg');
@@ -948,7 +945,6 @@
             }, 3000);
         };
 
-        // Initial UI load
         updateDashboard();
         renderPackages();
         renderExpensesList();
