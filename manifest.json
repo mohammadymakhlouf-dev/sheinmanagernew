@@ -1,7 +1,8 @@
 {
   "name": "منصة إدارة طرود شي إن",
   "short_name": "طرود شي إن",
-  "start_url": "./index.html",
+  "start_url": "/sheinmanagernew/index.html",
+  "scope": "/sheinmanagernew/",
   "display": "standalone",
   "background_color": "#f8fafc",
   "theme_color": "#06b6d4",
