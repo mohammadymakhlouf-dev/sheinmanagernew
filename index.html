@@ -118,6 +118,12 @@
 
             <!-- Action Controls -->
             <div class="flex items-center space-x-2 space-x-reverse">
+                <!-- زر تفعيل الإشعارات المضاف حديثاً -->
+                <button onclick="requestNotificationPermission()" class="flex items-center space-x-1.5 space-x-reverse bg-rose-600 text-white text-xs font-black px-3.5 py-2.5 rounded-xl shadow-md shadow-rose-600/20 active:scale-95 transition-all animate-pulse" title="تفعيل الإشعارات واختبار الصوت">
+                    <i class="ph-bold ph-bell-ringing text-base"></i>
+                    <span class="hidden sm:inline">تفعيل الإشعارات</span>
+                </button>
+
                 <button onclick="openModal()" class="flex items-center space-x-2 space-x-reverse bg-gradient-to-r from-cyan-500 to-teal-500 text-white text-xs font-black px-3.5 py-2.5 rounded-xl shadow-md shadow-cyan-500/20 active:scale-95 transition-all">
                     <i class="ph-bold ph-plus-circle text-base"></i>
                     <span class="hidden sm:inline">إضافة طرد</span>
@@ -386,6 +392,26 @@
             }
         };
 
+        // دالة تفعيل الإشعارات عبر الزر الجديد
+        window.requestNotificationPermission = async function() {
+            playNotificationSound();
+            if (!('Notification' in window)) {
+                showToast("متصفحك لا يدعم الإشعارات", "error");
+                return;
+            }
+            try {
+                const permission = await Notification.requestPermission();
+                if (permission === 'granted') {
+                    showToast("تم تفعيل الإشعارات بنجاح ✅", "success");
+                    sendSystemNotification("إشعار تجريبي", "تم ربط نظام الإشعارات والصوت بنجاح!");
+                } else {
+                    showToast("تم رفض إذن الإشعارات من إعدادات المتصفح", "error");
+                }
+            } catch (err) {
+                console.error("Permission error:", err);
+            }
+        };
+
         // --- Register Service Worker with Scope ---
         if ('serviceWorker' in navigator) {
             navigator.serviceWorker.register('./sw.js', { scope: './' })
@@ -500,8 +526,6 @@
                 localStorage.setItem('shein_expenses_data', JSON.stringify(window.expenses));
                 updateDashboard();
                 renderExpensesList();
-            }, (error) => {
-                console.error("Firestore Expenses sync error:", error);
             });
         }
 
@@ -641,14 +665,14 @@
             closeModal();
             updateDashboard();
             renderPackages();
-            sendSystemNotification("إشعار محلي", `تم حفظ الطرد الخاص بـ ${customerName} بنجاح`);
+            sendSystemNotification("حفظ طرد", `تم حفظ الطرد الخاص بـ ${customerName} بنجاح`);
             showToast("تم حفظ الطرد بنجاح ✅", "success");
         };
 
         window.confirmClearDeliveredPackages = function() {
             const deliveredCount = window.packages.filter(p => p.deliveryStatus === 'delivered').length;
             if (deliveredCount === 0) {
-                showToast("لا توجد طرود مسلّمة (مستلمة) لمسحها", "info");
+                showToast("لا توجد طرود مسلّمة لمسحها", "info");
                 return;
             }
             document.getElementById('deleteModalTitle').innerText = 'مسح جميع الطرود المستلمة';
