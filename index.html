@@ -5,6 +5,10 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>منصة إدارة طرود شي إن الاحترافية</title>
 
+    <!-- PWA Manifest & Theme Color (تمت إضافتها هنا لربط التثبيت) -->
+    <link rel="manifest" href="manifest.json">
+    <meta name="theme-color" content="#06b6d4">
+
     <!-- Tailwind CSS CDN -->
     <script src="https://cdn.tailwindcss.com"></script>
     <script>
@@ -418,7 +422,6 @@
             try {
                 window.messaging = getMessaging(app);
                 
-                // Request Permission and Get FCM Token for Background Messaging
                 Notification.requestPermission().then(permission => {
                     if (permission === 'granted') {
                         getToken(window.messaging, { serviceWorkerRegistration: navigator.serviceWorker.ready })
@@ -428,7 +431,6 @@
                     }
                 });
 
-                // Handle Foreground Messages
                 onMessage(window.messaging, (payload) => {
                     playNotificationSound();
                     showToast(payload.notification.title + ": " + payload.notification.body, "info");
@@ -458,7 +460,6 @@
         function initFirestoreListeners() {
             if (!window.db) return;
 
-            // Listen to Packages
             onSnapshot(collection(window.db, COLLECTION_NAME), (snapshot) => {
                 let remotePackages = [];
                 snapshot.forEach(docSnap => {
@@ -478,7 +479,6 @@
                 document.getElementById('syncBadge').className = 'text-[11px] font-bold px-3 py-0.5 rounded-full bg-rose-500/10 text-rose-600 border border-rose-500/20 flex items-center space-x-1.5 space-x-reverse';
             });
 
-            // Listen to Expenses
             onSnapshot(collection(window.db, EXPENSES_COLLECTION), (snapshot) => {
                 let remoteExpenses = [];
                 snapshot.forEach(docSnap => {
@@ -635,7 +635,6 @@
             showToast("تم حفظ الطرد بنجاح ✅", "success");
         };
 
-        // --- زر مسح الطرود المستلمة ---
         window.confirmClearDeliveredPackages = function() {
             const deliveredCount = window.packages.filter(p => p.deliveryStatus === 'delivered').length;
             if (deliveredCount === 0) {
@@ -726,7 +725,6 @@
             showToast("تم حذف الطرد بنجاح", "success");
         }
 
-        // --- Render Packages ---
         window.renderPackages = function() {
             const listEl = document.getElementById('packageList');
             const emptyEl = document.getElementById('emptyState');
