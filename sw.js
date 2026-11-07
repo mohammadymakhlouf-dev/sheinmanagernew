@@ -1,27 +1,61 @@
-// sw.js - Service Worker للإشعارات في الخلفية
-importScripts('https://www.gstatic.com/firebasejs/11.6.1/firebase-app-compat.js');
-importScripts('https://www.gstatic.com/firebasejs/11.6.1/firebase-messaging-compat.js');
+// sw.js - Service Worker للإشعارات والتخزين المؤقت
+const CACHE_NAME = 'shein-packages-v1';
+const assetsToCache = [
+  './index.html',
+  'https://cdn.tailwindcss.com',
+  'https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css',
+  'https://unpkg.com/@phosphor-icons/web',
+  'https://fonts.googleapis.com/css2?family=Cairo:wght@400;500;600;700;800;900&display=swap'
+];
 
-firebase.initializeApp({
-    apiKey: "AIzaSyAJdzCaQkxUD0lAWp0G6xRHsMPJL4RFkpQ",
-    authDomain: "shein-86c9f.firebaseapp.com",
-    projectId: "shein-86c9f",
-    storageBucket: "shein-86c9f.firebasestorage.app",
-    messagingSenderId: "292671039190",
-    appId: "1:292671039190:web:5f22b7fdf7bbf0f6d18b77",
-    measurementId: "G-JBL21T1DZ0"
+// تثبيت الـ Service Worker وتخزين الملفات الأساسية
+self.addEventListener('install', (event) => {
+  event.waitUntil(
+    caches.open(CACHE_NAME).then((cache) => {
+      return cache.addAll(assetsToCache);
+    })
+  );
+  self.skipWaiting();
 });
 
-const messaging = firebase.messaging();
+// تفعيل الخدمة وتنظيف الكاش القديم
+self.addEventListener('activate', (event) => {
+  event.waitUntil(
+    caches.keys().then((keys) => {
+      return Promise.all(
+        keys.map((key) => {
+          if (key !== CACHE_NAME) {
+            return caches.delete(key);
+          }
+        })
+      );
+    })
+  );
+  self.clients.claim();
+});
 
-messaging.onBackgroundMessage((payload) => {
-    const notificationTitle = payload.notification.title || 'منصة طرود شي إن';
-    const notificationOptions = {
-        body: payload.notification.body || 'لديك تحديث جديد في الطرود',
-        icon: 'https://cdn-icons-png.flaticon.com/512/684/684900.png',
-        badge: 'https://cdn-icons-png.flaticon.com/512/684/684900.png',
-        vibrate: [200, 100, 200]
-    };
+// التعامل مع الطلبات (Fetch)
+self.addEventListener('fetch', (event) => {
+  event.respondWith(
+    caches.match(event.request).then((cachedResponse) => {
+      return cachedResponse || fetch(event.request).catch(() => {
+        // إذا انقطع الإنترنت، يمكن إرجاع صفحة أو محتوى احتياطي هنا
+      });
+    })
+  );
+});
 
-    self.registration.showNotification(notificationTitle, notificationOptions);
+// استقبال إشعارات الخلفية
+self.addEventListener('push', (event) => {
+  const data = event.data ? event.data.json() : {};
+  const title = data.title || 'منصة طرود شي إن';
+  const options = {
+    body: data.body || 'لديك تحديث جديد في الطرود',
+    icon: 'https://cdn-icons-png.flaticon.com/512/684/684900.png',
+    vibrate: [200, 100, 200]
+  };
+
+  event.waitUntil(
+    self.registration.showNotification(title, options)
+  );
 });
