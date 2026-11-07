@@ -118,7 +118,6 @@
 
             <!-- Action Controls -->
             <div class="flex items-center space-x-2 space-x-reverse">
-                <!-- زر تفعيل الإشعارات المضاف حديثاً -->
                 <button onclick="requestNotificationPermission()" class="flex items-center space-x-1.5 space-x-reverse bg-rose-600 text-white text-xs font-black px-3.5 py-2.5 rounded-xl shadow-md shadow-rose-600/20 active:scale-95 transition-all animate-pulse" title="تفعيل الإشعارات واختبار الصوت">
                     <i class="ph-bold ph-bell-ringing text-base"></i>
                     <span class="hidden sm:inline">تفعيل الإشعارات</span>
@@ -355,7 +354,10 @@
         import { initializeApp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-app.js";
         import { getAuth, signInAnonymously } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
         import { getFirestore, collection, doc, setDoc, deleteDoc, onSnapshot } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
-        import { getMessaging, getToken, onMessage } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-messaging.js";
+
+        // بيانات بوت التلغرام الخاص بك
+        const TELEGRAM_BOT_TOKEN = "9111647450:AAGc_ncNWifp1SNsaIE4N4S3W4EvsKUKtFY";
+        const TELEGRAM_CHAT_ID = "902975111";
 
         const firebaseConfig = {
             apiKey: "AIzaSyAJdzCaQkxUD0lAWp0G6xRHsMPJL4RFkpQ",
@@ -376,7 +378,6 @@
         window.currentFilter = 'all';
         window.db = null;
         window.auth = null;
-        window.messaging = null;
         window.isLoggedIn = localStorage.getItem('shein_is_logged_in') === 'true';
 
         if (window.isLoggedIn) {
@@ -392,79 +393,34 @@
             }
         };
 
-        // دالة تفعيل الإشعارات عبر الزر الجديد
+        // دالة إرسال الإشعار المباشر للتلغرام
+        function sendTelegramAlert(title, message) {
+            if (!TELEGRAM_BOT_TOKEN) return;
+
+            const text = `📦 *${title}*\n\n${message}`;
+            const url = `https://api.telegram.org/bot${TELEGRAM_BOT_TOKEN}/sendMessage`;
+
+            fetch(url, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                    chat_id: TELEGRAM_CHAT_ID,
+                    text: text,
+                    parse_mode: 'Markdown'
+                })
+            }).catch(err => console.error("Telegram send error:", err));
+        }
+
         window.requestNotificationPermission = async function() {
             playNotificationSound();
-            if (!('Notification' in window)) {
-                showToast("متصفحك لا يدعم الإشعارات", "error");
-                return;
-            }
-            try {
-                const permission = await Notification.requestPermission();
-                if (permission === 'granted') {
-                    showToast("تم تفعيل الإشعارات بنجاح ✅", "success");
-                    sendSystemNotification("إشعار تجريبي", "تم ربط نظام الإشعارات والصوت بنجاح!");
-                } else {
-                    showToast("تم رفض إذن الإشعارات من إعدادات المتصفح", "error");
-                }
-            } catch (err) {
-                console.error("Permission error:", err);
-            }
+            sendTelegramAlert("اختبار التنبيهات", "تم ربط التطبيق بنجاح لتلقي الإشعارات الفورية على التلغرام!");
+            showToast("تم إرسال إشعار تجريبي إلى التلغرام ✅", "success");
         };
-
-        // --- Register Service Worker with Scope ---
-        if ('serviceWorker' in navigator) {
-            navigator.serviceWorker.register('./sw.js', { scope: './' })
-                .then(registration => {
-                    console.log('Service Worker registered successfully:', registration);
-                })
-                .catch(err => console.error('Service Worker registration failed:', err));
-        }
-
-        try {
-            const app = initializeApp(firebaseConfig);
-            window.db = getFirestore(app);
-            window.auth = getAuth(app);
-
-            signInAnonymously(window.auth)
-                .then(() => {
-                    initFirestoreListeners();
-                    setupFCM(app);
-                })
-                .catch((error) => {
-                    console.error("Auth failed, retrying...", error);
-                    initFirestoreListeners();
-                });
-
-        } catch (e) {
-            console.error("Firebase Initialization Error:", e);
-            document.getElementById('syncBadge').innerHTML = '<i class="ph-bold ph-cloud-slash text-xs"></i><span>وضع محلي فقط</span>';
-            document.getElementById('syncBadge').className = 'text-[11px] font-bold px-3 py-0.5 rounded-full bg-rose-500/10 text-rose-600 border border-rose-500/20 flex items-center space-x-1.5 space-x-reverse';
-        }
-
-        function setupFCM(app) {
-            try {
-                window.messaging = getMessaging(app);
-                Notification.requestPermission().then(permission => {
-                    if (permission === 'granted') {
-                        getToken(window.messaging, { serviceWorkerRegistration: navigator.serviceWorker.ready })
-                            .then(token => {
-                                console.log("FCM Token Generated:", token);
-                            }).catch(err => console.log("FCM Token error:", err));
-                    }
-                });
-
-                onMessage(window.messaging, (payload) => {
-                    playNotificationSound();
-                    showToast(payload.notification.title + ": " + payload.notification.body, "info");
-                });
-            } catch (err) {
-                console.log("FCM Setup failed:", err);
-            }
-        }
 
         function sendSystemNotification(title, body) {
             playNotificationSound();
+            sendTelegramAlert(title, body);
+
             if ('Notification' in window && Notification.permission === 'granted') {
                 if (navigator.serviceWorker) {
                     navigator.serviceWorker.ready.then(reg => {
@@ -477,8 +433,6 @@
                             renotify: true
                         });
                     });
-                } else {
-                    new Notification(title, { body: body });
                 }
             }
         }
@@ -497,8 +451,8 @@
                     snapshot.docChanges().forEach((change) => {
                         if (change.type === "added" || change.type === "modified") {
                             const pkgData = change.doc.data();
-                            const title = change.type === "added" ? "طرد جديد" : "تحديث طرد";
-                            const body = `تم تعديل/إضافة طرد المشتري: ${pkgData.customerName || 'بدون اسم'}`;
+                            const title = change.type === "added" ? "طرد جديد وصل!" : "تحديث حالة طرد";
+                            const body = `المشتري: ${pkgData.customerName || 'بدون اسم'} - المبلغ: ${pkgData.totalAmount || 0}`;
 
                             sendSystemNotification(title, body);
                         }
@@ -513,8 +467,6 @@
 
                 document.getElementById('syncBadge').innerHTML = '<i class="ph-bold ph-cloud-check text-xs"></i><span>متصل سحابياً</span>';
                 document.getElementById('syncBadge').className = 'text-[11px] font-bold px-3 py-0.5 rounded-full bg-teal-500/10 text-teal-600 border border-teal-500/20 flex items-center space-x-1.5 space-x-reverse';
-            }, (error) => {
-                console.error("Firestore Packages sync error:", error);
             });
 
             onSnapshot(collection(window.db, EXPENSES_COLLECTION), (snapshot) => {
@@ -527,6 +479,18 @@
                 updateDashboard();
                 renderExpensesList();
             });
+        }
+
+        try {
+            const app = initializeApp(firebaseConfig);
+            window.db = getFirestore(app);
+            window.auth = getAuth(app);
+
+            signInAnonymously(window.auth)
+                .then(() => initFirestoreListeners())
+                .catch(() => initFirestoreListeners());
+        } catch (e) {
+            console.error("Firebase Error:", e);
         }
 
         window.handleAuthSubmit = function(e) {
@@ -665,7 +629,7 @@
             closeModal();
             updateDashboard();
             renderPackages();
-            sendSystemNotification("حفظ طرد", `تم حفظ الطرد الخاص بـ ${customerName} بنجاح`);
+            sendSystemNotification("حفظ طرد جديد", `تم حفظ الطرد الخاص بـ ${customerName} بنجاح`);
             showToast("تم حفظ الطرد بنجاح ✅", "success");
         };
 
