@@ -440,12 +440,15 @@
         function sendSystemNotification(title, body) {
             playNotificationSound();
             if ('Notification' in window && Notification.permission === 'granted') {
-                if (navigator.serviceWorker && navigator.serviceWorker.controller) {
+                if (navigator.serviceWorker) {
                     navigator.serviceWorker.ready.then(reg => {
                         reg.showNotification(title, {
                             body: body,
                             icon: 'https://cdn-icons-png.flaticon.com/512/684/684900.png',
-                            vibrate: [200, 100, 200]
+                            badge: 'https://cdn-icons-png.flaticon.com/512/684/684900.png',
+                            vibrate: [300, 100, 300, 100, 300],
+                            tag: 'shein-pkg-notification-' + Date.now(),
+                            renotify: true
                         });
                     });
                 } else {
@@ -464,9 +467,16 @@
                     remotePackages.push({ id: docSnap.id, ...docSnap.data() });
                 });
                 
-                if (!isInitialLoad && remotePackages.length !== window.packages.length) {
-                    playNotificationSound();
-                    sendSystemNotification("تحديث سحابي", "تم تحديث أو إضافة طرد جديد عبر السحابة");
+                if (!isInitialLoad && snapshot.docChanges().length > 0) {
+                    snapshot.docChanges().forEach((change) => {
+                        if (change.type === "added" || change.type === "modified") {
+                            const pkgData = change.doc.data();
+                            const title = change.type === "added" ? "طرد جديد" : "تحديث طرد";
+                            const body = `تم تعديل/إضافة طرد المشتري: ${pkgData.customerName || 'بدون اسم'}`;
+
+                            sendSystemNotification(title, body);
+                        }
+                    });
                 }
                 isInitialLoad = false;
 
