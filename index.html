@@ -353,11 +353,10 @@
     <script type="module">
         import { initializeApp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-app.js";
         import { getAuth, signInAnonymously } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
-        import { getFirestore, collection, doc, setDoc, deleteDoc, onSnapshot } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
+        import { getFirestore, collection, doc, setDoc, deleteDoc, onSnapshot, getDocs } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
 
         // بيانات بوت التلغرام الخاص بك
         const TELEGRAM_BOT_TOKEN = "9111647450:AAGc_ncNWifp1SNsaIE4N4S3W4EvsKUKtFY";
-        const TELEGRAM_CHAT_ID = "902975111";
 
         const firebaseConfig = {
             apiKey: "AIzaSyAJdzCaQkxUD0lAWp0G6xRHsMPJL4RFkpQ",
@@ -393,33 +392,45 @@
             }
         };
 
-        // دالة إرسال الإشعار المباشر للتلغرام
-        function sendTelegramAlert(title, message) {
-            if (!TELEGRAM_BOT_TOKEN) return;
+        // دالة إرسال الإشعار لجميع المشتركين المسجلين في مجموعة telegram_subscribers
+        async function sendTelegramBroadcast(title, message) {
+            if (!TELEGRAM_BOT_TOKEN || !window.db) return;
 
-            const text = `📦 *${title}*\n\n${message}`;
-            const url = `https://api.telegram.org/bot${TELEGRAM_BOT_TOKEN}/sendMessage`;
+            try {
+                const querySnapshot = await getDocs(collection(window.db, 'telegram_subscribers'));
+                const text = `📦 *${title}*\n\n${message}`;
+                const url = `https://api.telegram.org/bot${TELEGRAM_BOT_TOKEN}/sendMessage`;
 
-            fetch(url, {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({
-                    chat_id: TELEGRAM_CHAT_ID,
-                    text: text,
-                    parse_mode: 'Markdown'
-                })
-            }).catch(err => console.error("Telegram send error:", err));
+                querySnapshot.forEach(async (docSnap) => {
+                    const chatId = docSnap.id; // يأخذ رقم الـ Chat ID المخزن كمعرف للمستند
+                    try {
+                        await fetch(url, {
+                            method: 'POST',
+                            headers: { 'Content-Type': 'application/json' },
+                            body: JSON.stringify({
+                                chat_id: chatId,
+                                text: text,
+                                parse_mode: 'Markdown'
+                            })
+                        });
+                    } catch (err) {
+                        console.error("Telegram send error to: " + chatId, err);
+                    }
+                });
+            } catch (err) {
+                console.error("Error fetching telegram subscribers for broadcast:", err);
+            }
         }
 
         window.requestNotificationPermission = async function() {
             playNotificationSound();
-            sendTelegramAlert("اختبار التنبيهات", "تم ربط التطبيق بنجاح لتلقي الإشعارات الفورية على التلغرام!");
-            showToast("تم إرسال إشعار تجريبي إلى التلغرام ✅", "success");
+            sendTelegramBroadcast("اختبار التنبيهات", "تم ربط التطبيق بنجاح لتلقي الإشعارات الفورية الجماعية على التلغرام!");
+            showToast("تم إرسال إشعار تجريبي جماعي إلى التلغرام ✅", "success");
         };
 
         function sendSystemNotification(title, body) {
             playNotificationSound();
-            sendTelegramAlert(title, body);
+            sendTelegramBroadcast(title, body);
 
             if ('Notification' in window && Notification.permission === 'granted') {
                 if (navigator.serviceWorker) {
